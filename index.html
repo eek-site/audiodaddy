@@ -892,6 +892,85 @@
       color: var(--color-text-muted);
     }
 
+    /* Funding Section */
+    .funding-section {
+      padding: 100px 0;
+      border-top: 1px solid var(--color-border);
+      background: linear-gradient(180deg, var(--color-bg) 0%, rgba(0, 212, 170, 0.03) 100%);
+    }
+
+    .funding-header {
+      text-align: center;
+      margin-bottom: 60px;
+    }
+
+    .funding-header h2 {
+      font-size: 2.2rem;
+      margin-bottom: 16px;
+    }
+
+    .funding-header p {
+      color: var(--color-text-muted);
+      font-size: 1.1rem;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    .funding-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 60px;
+      align-items: start;
+    }
+
+    .funding-info h3 {
+      font-size: 1.3rem;
+      margin-bottom: 24px;
+      color: var(--color-accent);
+    }
+
+    .funding-info ul {
+      list-style: none;
+      margin-bottom: 32px;
+    }
+
+    .funding-info li {
+      padding: 12px 0;
+      border-bottom: 1px solid var(--color-border);
+      font-size: 1.05rem;
+    }
+
+    .funding-info li:last-child {
+      border-bottom: none;
+    }
+
+    .funding-note {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius);
+      padding: 20px;
+    }
+
+    .funding-note p {
+      color: var(--color-text-muted);
+      font-size: 0.95rem;
+      margin: 0;
+    }
+
+    .funding-form-container {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      padding: 40px;
+    }
+
+    @media (max-width: 968px) {
+      .funding-grid {
+        grid-template-columns: 1fr;
+        gap: 40px;
+      }
+    }
+
     /* Footer */
     footer {
       border-top: 1px solid var(--color-border);
@@ -1058,6 +1137,7 @@
         <ul class="nav-links">
           <li><a href="#transcribe">Transcribe</a></li>
           <li><a href="#story">Our Story</a></li>
+          <li><a href="#funding">Funding</a></li>
           <li><a href="#contact">Contact</a></li>
         </ul>
       </div>
@@ -1190,17 +1270,17 @@
       <div class="story-grid">
         <div class="story-content">
           <h2>Why I built this</h2>
-          <p>I run a claims management and emergency response company. For compliance, I need to keep records of phone calls with customers and suppliers. Turning those recordings into text was costing me a fortune.</p>
-          <p>Every transcription service wanted me on a monthly subscription. £30 here, £50 there. I don't need 500 minutes a month—I just need to transcribe a few calls when I need to.</p>
-          <p>So I built exactly what I wanted: upload a file, see the price upfront, pay for just that file, get the transcript. No accounts. No recurring charges. No nonsense.</p>
-          <p>If it's useful to you too, brilliant. If it's rubbish, tell me—I'll fix it.</p>
+          <p>I run a claims management and emergency response company. Transcription services were charging ridiculous monthly fees for something I only needed occasionally.</p>
+          <p>So I built exactly what I wanted: upload a file, see the price, pay for just that file, get your transcript. No subscriptions. No accounts. No nonsense.</p>
+          <p><strong>But here's the thing:</strong> Audio Daddy is a public service. All profits generated go directly to good works—supporting community projects, charities, and people who need a hand.</p>
+          <p>Need funding for your project or cause? Apply below. If it's useful to you, brilliant. If you've got ideas to make it better, tell me.</p>
           <div class="signature">
             <div class="signature-name">Mr Profit</div>
             <div class="signature-title">Founder & Chief Audio Daddy</div>
           </div>
         </div>
         <div class="story-visual">
-          <div class="big-emoji">😤</div>
+          <div class="big-emoji">💚</div>
           <p class="quote">
             <span class="quote-mark">"</span>I just want to pay for what I use. Is that too much to ask?<span class="quote-mark">"</span>
           </p>
@@ -1297,6 +1377,63 @@
     </div>
   </section>
 
+  <!-- Funding Section -->
+  <section class="funding-section" id="funding">
+    <div class="container">
+      <div class="funding-header">
+        <h2>💚 Apply for Funding</h2>
+        <p>All profits from Audio Daddy go to good works. If you're running a community project, charity initiative, or just need a hand—tell us about it.</p>
+      </div>
+      <div class="funding-grid">
+        <div class="funding-info">
+          <h3>What we fund</h3>
+          <ul>
+            <li>🏘️ Community projects and local initiatives</li>
+            <li>🤝 Charitable causes and non-profits</li>
+            <li>🎓 Education and skill-building programmes</li>
+            <li>🆘 Emergency assistance for those in need</li>
+            <li>🌱 Environmental and sustainability projects</li>
+          </ul>
+          <div class="funding-note">
+            <p><strong>No bureaucracy.</strong> Just tell us what you need and why. We read every application personally.</p>
+          </div>
+        </div>
+        <div class="funding-form-container">
+          <form id="fundingForm" onsubmit="submitFundingForm(event)">
+            <div class="form-group">
+              <label for="fundingName">Your name</label>
+              <input type="text" id="fundingName" name="name" required placeholder="Jane Smith" />
+            </div>
+            <div class="form-group">
+              <label for="fundingEmail">Email address</label>
+              <input type="email" id="fundingEmail" name="email" required placeholder="jane@example.com" />
+            </div>
+            <div class="form-group">
+              <label for="fundingOrg">Organisation (if applicable)</label>
+              <input type="text" id="fundingOrg" name="organisation" placeholder="Community Group Name" />
+            </div>
+            <div class="form-group">
+              <label for="fundingAmount">Amount requested (£)</label>
+              <input type="number" id="fundingAmount" name="amount" placeholder="500" min="1" />
+            </div>
+            <div class="form-group">
+              <label for="fundingProject">Tell us about your project</label>
+              <textarea id="fundingProject" name="project" required placeholder="What are you trying to achieve? How will the funding help? Who will benefit?"></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary" id="fundingSubmitBtn">
+              Submit Application
+            </button>
+          </form>
+          <div class="form-success" id="fundingSuccess">
+            <div class="icon">💚</div>
+            <h3>Application received!</h3>
+            <p>We'll review your application and get back to you soon.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <!-- Footer -->
   <footer>
     <div class="container">
@@ -1313,6 +1450,7 @@
           <ul>
             <li><a href="#transcribe">Transcribe</a></li>
             <li><a href="#story">Our Story</a></li>
+            <li><a href="#funding">Apply for Funding</a></li>
             <li><a href="#contact">Contact</a></li>
           </ul>
         </div>
@@ -1811,6 +1949,49 @@
         alert('Failed to send message. Please try again.');
         btn.disabled = false;
         btn.innerHTML = 'Send Message';
+      }
+    }
+
+    // ===========================================
+    // FUNDING FORM
+    // ===========================================
+    async function submitFundingForm(e) {
+      e.preventDefault();
+      
+      const btn = document.getElementById('fundingSubmitBtn');
+      const form = document.getElementById('fundingForm');
+      const success = document.getElementById('fundingSuccess');
+      
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner"></span> Submitting...';
+      
+      const formData = {
+        formType: 'funding',
+        fields: [
+          { name: 'name', value: document.getElementById('fundingName').value },
+          { name: 'email', value: document.getElementById('fundingEmail').value },
+          { name: 'organisation', value: document.getElementById('fundingOrg').value || 'N/A' },
+          { name: 'amount', value: document.getElementById('fundingAmount').value || 'Not specified' },
+          { name: 'project', value: document.getElementById('fundingProject').value },
+          { name: 'source', value: 'audiodaddy.co.uk' },
+          { name: 'timestamp', value: new Date().toISOString() }
+        ]
+      };
+
+      try {
+        await fetch(CONFIG.endpoints.contact, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(formData)
+        });
+        
+        form.style.display = 'none';
+        success.classList.add('visible');
+        
+      } catch (error) {
+        alert('Failed to submit application. Please try again.');
+        btn.disabled = false;
+        btn.innerHTML = 'Submit Application';
       }
     }
 
