@@ -1,0 +1,12 @@
+# robots.txt for audiodaddy.co.uk
+# https://audiodaddy.co.uk
+
+User-agent: *
+Allow: /
+
+# Sitemap location
+Sitemap: https://audiodaddy.co.uk/sitemap.xml
+
+# Crawl-delay (optional, be nice to servers)
+Crawl-delay: 1
+

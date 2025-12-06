@@ -1,0 +1,9 @@
+# Security policy for audiodaddy.co.uk
+# https://securitytxt.org/
+
+Contact: mailto:support@audiodaddy.co.uk
+Contact: tel:+447501250720
+Expires: 2025-12-31T23:59:59.000Z
+Preferred-Languages: en
+Canonical: https://audiodaddy.co.uk/.well-known/security.txt
+

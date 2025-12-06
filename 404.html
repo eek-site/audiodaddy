@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Page Not Found | Audio Daddy</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="manifest" href="/site.webmanifest">
+  <style>
+    :root {
+      --color-bg: #0a0a0b;
+      --color-surface: #141416;
+      --color-text: #ffffff;
+      --color-text-muted: #8a8a8d;
+      --color-accent: #00d4aa;
+      --color-accent-hover: #00f5c4;
+      --color-border: #2a2a2d;
+      --font-display: 'Outfit', system-ui, sans-serif;
+      --font-mono: 'Space Mono', monospace;
+      --radius: 12px;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: var(--font-display);
+      background: var(--color-bg);
+      color: var(--color-text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 20px;
+    }
+
+    .error-icon {
+      font-size: 5rem;
+      margin-bottom: 24px;
+      animation: float 3s ease-in-out infinite;
+    }
+
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-10px); }
+    }
+
+    h1 {
+      font-size: 2.5rem;
+      font-weight: 700;
+      margin-bottom: 16px;
+    }
+
+    .error-code {
+      font-family: var(--font-mono);
+      color: var(--color-accent);
+    }
+
+    p {
+      color: var(--color-text-muted);
+      font-size: 1.1rem;
+      margin-bottom: 32px;
+      max-width: 400px;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 16px 32px;
+      background: var(--color-accent);
+      color: var(--color-bg);
+      font-family: var(--font-display);
+      font-size: 1rem;
+      font-weight: 600;
+      border: none;
+      border-radius: var(--radius);
+      cursor: pointer;
+      text-decoration: none;
+      transition: all 0.2s ease;
+    }
+
+    .btn:hover {
+      background: var(--color-accent-hover);
+      transform: translateY(-2px);
+    }
+
+    .footer-note {
+      position: absolute;
+      bottom: 24px;
+      color: var(--color-text-muted);
+      font-size: 0.875rem;
+    }
+
+    .footer-note a {
+      color: var(--color-accent);
+      text-decoration: none;
+    }
+
+    .footer-note a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <div class="error-icon">🎧</div>
+  <h1><span class="error-code">404</span> — Lost in the static</h1>
+  <p>The page you're looking for doesn't exist. Maybe it was transcribed into another dimension.</p>
+  <a href="/" class="btn">← Back to Audio Daddy</a>
+  <p class="footer-note">
+    <a href="https://audiodaddy.co.uk">audiodaddy.co.uk</a> — Pay-per-minute transcription
+  </p>
+</body>
+</html>
+
