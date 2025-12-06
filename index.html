@@ -1270,17 +1270,17 @@
       <div class="story-grid">
         <div class="story-content">
           <h2>Why I built this</h2>
-          <p>I run a claims management and emergency response company. Transcription services were charging ridiculous monthly fees for something I only needed occasionally.</p>
-          <p>So I built exactly what I wanted: upload a file, see the price, pay for just that file, get your transcript. No subscriptions. No accounts. No nonsense.</p>
-          <p><strong>But here's the thing:</strong> Audio Daddy is a public service. All profits generated go directly to good works—supporting community projects, charities, and people who need a hand.</p>
-          <p>Need funding for your project or cause? Apply below. If it's useful to you, brilliant. If you've got ideas to make it better, tell me.</p>
+          <p>I run a claims management and emergency response company. For compliance, I need to keep records of phone calls with customers and suppliers. Turning those recordings into text was costing me a fortune.</p>
+          <p>Every transcription service wanted me on a monthly subscription. £30 here, £50 there. I don't need 500 minutes a month—I just need to transcribe a few calls when I need to.</p>
+          <p>So I built exactly what I wanted: upload a file, see the price upfront, pay for just that file, get the transcript. No accounts. No recurring charges. No nonsense.</p>
+          <p>If it's useful to you too, brilliant. If it's rubbish, tell me—I'll fix it.</p>
           <div class="signature">
             <div class="signature-name">Mr Profit</div>
             <div class="signature-title">Founder & Chief Audio Daddy</div>
           </div>
         </div>
         <div class="story-visual">
-          <div class="big-emoji">💚</div>
+          <div class="big-emoji">😤</div>
           <p class="quote">
             <span class="quote-mark">"</span>I just want to pay for what I use. Is that too much to ask?<span class="quote-mark">"</span>
           </p>
@@ -1382,7 +1382,7 @@
     <div class="container">
       <div class="funding-header">
         <h2>💚 Apply for Funding</h2>
-        <p>All profits from Audio Daddy go to good works. If you're running a community project, charity initiative, or just need a hand—tell us about it.</p>
+        <p>You found it. Audio Daddy is a public service—all profits go directly to good works. Community projects, charities, people who need a hand. If that's you, tell us about it.</p>
       </div>
       <div class="funding-grid">
         <div class="funding-info">
@@ -1729,7 +1729,7 @@
           btn.disabled = false;
           state.paymentReady = true;
           // Scroll to payment form
-          scrollToTool();
+          scrollToPayment();
         } catch (error) {
           showError(error.message || 'Failed to load payment form');
           btn.disabled = false;
@@ -2040,11 +2040,20 @@
     }
 
     function scrollToTool() {
-      const toolSection = document.getElementById('transcribe');
-      if (toolSection) {
+      const toolCard = document.querySelector('.tool-card');
+      if (toolCard) {
         setTimeout(() => {
-          toolSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          toolCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }, 100);
+      }
+    }
+
+    function scrollToPayment() {
+      const paymentSection = document.getElementById('paymentSection');
+      if (paymentSection) {
+        setTimeout(() => {
+          paymentSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 150);
       }
     }
   </script>
