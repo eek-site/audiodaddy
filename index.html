@@ -1342,7 +1342,7 @@
       currencySymbol: '£',
       
       // Stripe
-      stripePublishableKey: 'pk_live_XXXXXXXXXXXXXXXXXXXXXXXXX', // TODO: Add your Stripe publishable key
+      stripePublishableKey: 'pk_live_51SbPdsGS5FVhjJaRdzMH6Hit5Vveay4aAsOtdEPoL6VVzrOarBKz7rQGVmUqI8DtoSGmylm0CIX9mG0W527K3wek003XXZEK93',
       stripePercent: 0.029,
       stripeFixed: 0.20,
       
@@ -1354,8 +1354,11 @@
       
       // Power Automate endpoints
       endpoints: {
+        // Creates Stripe Checkout session, returns { checkoutUrl: "..." }
         createCheckout: 'https://default61ffc6bcd9ce458b8120d32187c377.0d.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/667f78ea935b41b1bca7bb443f664837/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=1nwjXAiQ_mo29tMu6vBTPo5cO0lNQgPnB5EbL5cOahI',
-        transcribe: 'YOUR_POWER_AUTOMATE_TRANSCRIBE_ENDPOINT', // TODO: Add transcription endpoint
+        // Verifies payment session, returns { valid: true, key: "sk-..." } - TODO: Create this flow
+        verifyPayment: 'YOUR_POWER_AUTOMATE_VERIFY_PAYMENT_ENDPOINT',
+        // Contact form
         contact: 'https://default61ffc6bcd9ce458b8120d32187c377.0d.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/1d9490a2a5294b31b14287e143e5e9b4/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=sMYCU3UAD1M9w9lVkfehzJUYBx4mo5KtE9Ft0iHaBc0'
       }
     };
