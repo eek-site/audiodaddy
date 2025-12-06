@@ -1341,7 +1341,8 @@
       currency: 'GBP',
       currencySymbol: '£',
       
-      // Stripe fees (UK)
+      // Stripe
+      stripePublishableKey: 'pk_live_XXXXXXXXXXXXXXXXXXXXXXXXX', // TODO: Add your Stripe publishable key
       stripePercent: 0.029,
       stripeFixed: 0.20,
       
@@ -1351,11 +1352,11 @@
       // Max file size (25MB)
       maxFileSize: 25 * 1024 * 1024,
       
-      // Endpoints (replace with your actual endpoints)
+      // Power Automate endpoints
       endpoints: {
-        createPayment: '/api/create-payment-intent',
-        transcribe: '/api/transcribe',
-        contact: 'YOUR_POWER_AUTOMATE_CONTACT_ENDPOINT'
+        createCheckout: 'https://default61ffc6bcd9ce458b8120d32187c377.0d.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/667f78ea935b41b1bca7bb443f664837/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=1nwjXAiQ_mo29tMu6vBTPo5cO0lNQgPnB5EbL5cOahI',
+        transcribe: 'YOUR_POWER_AUTOMATE_TRANSCRIBE_ENDPOINT', // TODO: Add transcription endpoint
+        contact: 'https://default61ffc6bcd9ce458b8120d32187c377.0d.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/1d9490a2a5294b31b14287e143e5e9b4/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=sMYCU3UAD1M9w9lVkfehzJUYBx4mo5KtE9Ft0iHaBc0'
       }
     };
 
@@ -1400,6 +1401,9 @@
     // INITIALIZATION
     // ===========================================
     document.addEventListener('DOMContentLoaded', () => {
+      // Check if returning from payment
+      checkPaymentSuccess();
+
       // Click to upload
       elements.uploadZone.addEventListener('click', () => {
         elements.fileInput.click();
@@ -1540,40 +1544,111 @@
       btn.innerHTML = '<span class="spinner"></span> Processing...';
 
       try {
-        // Simulate payment (replace with real Stripe integration)
-        await simulatePayment();
+        // Step 1: Create Stripe Checkout session via Power Automate
+        const checkoutUrl = await createCheckoutSession();
         
-        updateSteps('step3');
-        showPanel('processing');
+        // Step 2: Store file in session storage for after payment
+        // (We'll need to re-upload after payment success)
+        sessionStorage.setItem('pendingTranscription', JSON.stringify({
+          fileName: state.file.name,
+          fileSize: state.file.size,
+          duration: state.duration,
+          price: state.price
+        }));
         
-        // Transcribe (replace with actual API)
-        const transcript = await transcribeAudio();
-        
-        state.transcript = transcript;
-        elements.transcriptText.textContent = transcript;
-        showPanel('result');
+        // Step 3: Redirect to Stripe Checkout
+        window.location.href = checkoutUrl;
 
       } catch (error) {
+        console.error('Payment error:', error);
         showError(error.message || 'Payment failed. Please try again.');
         showPanel('price');
-      } finally {
         btn.disabled = false;
         btn.innerHTML = 'Pay & Transcribe';
       }
     }
 
-    async function simulatePayment() {
-      return new Promise((resolve) => {
-        setTimeout(resolve, 1500);
+    async function createCheckoutSession() {
+      // Prepare the data for Power Automate
+      const paymentData = {
+        amount: Math.round(state.price * 100), // Convert to pence
+        currency: CONFIG.currency.toLowerCase(),
+        fileName: state.file.name,
+        durationSeconds: Math.round(state.duration),
+        durationFormatted: formatDuration(state.duration),
+        ratePerMinute: CONFIG.ratePerMinute,
+        source: 'audiodaddy.co.uk',
+        successUrl: window.location.origin + '/success.html?session_id={CHECKOUT_SESSION_ID}',
+        cancelUrl: window.location.origin + '/#transcribe'
+      };
+
+      const response = await fetch(CONFIG.endpoints.createCheckout, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(paymentData)
       });
+
+      if (!response.ok) {
+        throw new Error('Failed to create payment session');
+      }
+
+      const data = await response.json();
+      
+      // Power Automate should return the Stripe Checkout URL
+      if (!data.checkoutUrl) {
+        throw new Error('Invalid response from payment server');
+      }
+
+      return data.checkoutUrl;
     }
 
-    async function transcribeAudio() {
-      return new Promise((resolve) => {
-        setTimeout(() => {
-          resolve("This is a sample transcript. In production, this would be the actual transcribed text from your audio file.\n\nYour backend would handle the OpenAI Whisper API call and return the real transcript here.");
-        }, 2000);
+    async function transcribeAudio(audioFile, sessionId) {
+      // Prepare form data with audio file
+      const formData = new FormData();
+      formData.append('audio', audioFile);
+      formData.append('sessionId', sessionId);
+      formData.append('fileName', audioFile.name);
+
+      const response = await fetch(CONFIG.endpoints.transcribe, {
+        method: 'POST',
+        body: formData
       });
+
+      if (!response.ok) {
+        throw new Error('Transcription failed. Please contact support.');
+      }
+
+      const data = await response.json();
+      return data.transcript;
+    }
+
+    // Check if returning from successful payment
+    function checkPaymentSuccess() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const sessionId = urlParams.get('session_id');
+      
+      if (sessionId) {
+        // We're returning from Stripe Checkout
+        const pendingData = sessionStorage.getItem('pendingTranscription');
+        if (pendingData) {
+          // Show processing panel
+          updateSteps('step3');
+          showPanel('processing');
+          
+          // For now, show a message that they need to re-upload
+          // In production, you'd store the file server-side before payment
+          document.getElementById('processingStatus').textContent = 
+            'Payment successful! Processing your transcription...';
+          
+          // Clear the pending data
+          sessionStorage.removeItem('pendingTranscription');
+          
+          // Clear URL params
+          window.history.replaceState({}, document.title, window.location.pathname);
+        }
+      }
     }
 
     // ===========================================
@@ -1614,22 +1689,22 @@
       btn.innerHTML = '<span class="spinner"></span> Sending...';
       
       const formData = {
-        name: document.getElementById('contactName').value,
-        email: document.getElementById('contactEmail').value,
-        message: document.getElementById('contactMessage').value,
-        source: 'audiodaddy.co.uk'
+        formType: 'contact',
+        fields: [
+          { name: 'name', value: document.getElementById('contactName').value },
+          { name: 'email', value: document.getElementById('contactEmail').value },
+          { name: 'message', value: document.getElementById('contactMessage').value },
+          { name: 'source', value: 'audiodaddy.co.uk' },
+          { name: 'timestamp', value: new Date().toISOString() }
+        ]
       };
 
       try {
-        // Replace with your Power Automate endpoint
-        // await fetch(CONFIG.endpoints.contact, {
-        //   method: 'POST',
-        //   headers: { 'Content-Type': 'application/json' },
-        //   body: JSON.stringify(formData)
-        // });
-
-        // Simulate for now
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        await fetch(CONFIG.endpoints.contact, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(formData)
+        });
         
         form.style.display = 'none';
         success.classList.add('visible');

@@ -3,6 +3,7 @@
 
 User-agent: *
 Allow: /
+Disallow: /success.html
 
 # Sitemap location
 Sitemap: https://audiodaddy.co.uk/sitemap.xml

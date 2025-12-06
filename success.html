@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Payment Successful | Audio Daddy</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="manifest" href="/site.webmanifest">
+  <style>
+    :root {
+      --color-bg: #0a0a0b;
+      --color-surface: #141416;
+      --color-surface-2: #1c1c1f;
+      --color-text: #ffffff;
+      --color-text-muted: #8a8a8d;
+      --color-accent: #00d4aa;
+      --color-accent-hover: #00f5c4;
+      --color-border: #2a2a2d;
+      --font-display: 'Outfit', system-ui, sans-serif;
+      --font-mono: 'Space Mono', monospace;
+      --radius: 12px;
+      --radius-lg: 20px;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: var(--font-display);
+      background: var(--color-bg);
+      color: var(--color-text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    .card {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      padding: 48px;
+      max-width: 500px;
+      width: 100%;
+      text-align: center;
+    }
+
+    .icon {
+      font-size: 4rem;
+      margin-bottom: 24px;
+    }
+
+    h1 {
+      font-size: 1.75rem;
+      margin-bottom: 16px;
+      color: var(--color-accent);
+    }
+
+    p {
+      color: var(--color-text-muted);
+      line-height: 1.7;
+      margin-bottom: 24px;
+    }
+
+    .upload-zone {
+      border: 2px dashed var(--color-border);
+      border-radius: var(--radius);
+      padding: 40px 24px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      background: rgba(0, 212, 170, 0.02);
+      margin-bottom: 24px;
+    }
+
+    .upload-zone:hover,
+    .upload-zone.drag-over {
+      border-color: var(--color-accent);
+      background: rgba(0, 212, 170, 0.05);
+    }
+
+    .upload-zone h3 {
+      font-size: 1.1rem;
+      margin-bottom: 8px;
+    }
+
+    .upload-zone span {
+      color: var(--color-text-muted);
+      font-size: 0.9rem;
+    }
+
+    .upload-zone input {
+      display: none;
+    }
+
+    .processing {
+      display: none;
+    }
+
+    .processing.visible {
+      display: block;
+    }
+
+    .processing-animation {
+      width: 80px;
+      height: 80px;
+      margin: 0 auto 24px;
+      position: relative;
+    }
+
+    .processing-animation::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border: 3px solid var(--color-border);
+      border-top-color: var(--color-accent);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    .processing-animation::after {
+      content: "🎧";
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2rem;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .result {
+      display: none;
+    }
+
+    .result.visible {
+      display: block;
+    }
+
+    .transcript-box {
+      background: var(--color-surface-2);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius);
+      padding: 24px;
+      max-height: 300px;
+      overflow-y: auto;
+      text-align: left;
+      margin-bottom: 24px;
+    }
+
+    .transcript-text {
+      font-size: 0.95rem;
+      line-height: 1.8;
+      white-space: pre-wrap;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 14px 28px;
+      font-family: var(--font-display);
+      font-size: 0.95rem;
+      font-weight: 600;
+      border: none;
+      border-radius: var(--radius);
+      cursor: pointer;
+      transition: all 0.2s ease;
+      text-decoration: none;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--color-accent), #00a080);
+      color: var(--color-bg);
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+    }
+
+    .btn-secondary {
+      background: var(--color-surface-2);
+      border: 1px solid var(--color-border);
+      color: var(--color-text);
+    }
+
+    .btn-secondary:hover {
+      background: var(--color-border);
+    }
+
+    .btn-group {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .error {
+      display: none;
+      background: rgba(255, 100, 100, 0.1);
+      border: 1px solid rgba(255, 100, 100, 0.3);
+      border-radius: var(--radius);
+      padding: 16px;
+      margin-bottom: 24px;
+    }
+
+    .error.visible {
+      display: block;
+    }
+
+    .error p {
+      color: #ff6b6b;
+      margin: 0;
+    }
+
+    .spinner {
+      width: 18px;
+      height: 18px;
+      border: 2px solid rgba(0,0,0,0.2);
+      border-top-color: var(--color-bg);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      display: inline-block;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <!-- Initial State: Payment confirmed, upload file -->
+    <div id="uploadState">
+      <div class="icon">✅</div>
+      <h1>Payment successful!</h1>
+      <p>Now upload your audio file to get your transcript. This is a one-time upload for security—we don't store your files before payment.</p>
+      
+      <div class="error" id="errorBox">
+        <p id="errorText"></p>
+      </div>
+
+      <div class="upload-zone" id="uploadZone">
+        <h3>📁 Drop your audio file here</h3>
+        <span>or click to browse</span>
+        <input type="file" id="fileInput" accept="audio/*,.mp3,.mp4,.mpeg,.mpga,.m4a,.wav,.webm" />
+      </div>
+
+      <a href="/" class="btn btn-secondary">← Back to home</a>
+    </div>
+
+    <!-- Processing State -->
+    <div class="processing" id="processingState">
+      <div class="processing-animation"></div>
+      <h1>Transcribing...</h1>
+      <p id="processingStatus">This usually takes a few seconds per minute of audio.</p>
+    </div>
+
+    <!-- Result State -->
+    <div class="result" id="resultState">
+      <div class="icon">🎉</div>
+      <h1>Here's your transcript</h1>
+      
+      <div class="transcript-box">
+        <div class="transcript-text" id="transcriptText"></div>
+      </div>
+
+      <div class="btn-group">
+        <button class="btn btn-primary" onclick="copyTranscript()">📋 Copy</button>
+        <button class="btn btn-secondary" onclick="downloadTranscript()">💾 Download</button>
+        <a href="/" class="btn btn-secondary">Transcribe another →</a>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Config - must match main site
+    const CONFIG = {
+      endpoints: {
+        transcribe: 'YOUR_POWER_AUTOMATE_TRANSCRIBE_ENDPOINT' // TODO: Add your transcribe endpoint
+      }
+    };
+
+    let state = {
+      sessionId: null,
+      fileName: '',
+      transcript: ''
+    };
+
+    // Get session ID from URL
+    const urlParams = new URLSearchParams(window.location.search);
+    state.sessionId = urlParams.get('session_id');
+
+    // If no session ID, redirect to home
+    if (!state.sessionId) {
+      window.location.href = '/';
+    }
+
+    // DOM Elements
+    const uploadZone = document.getElementById('uploadZone');
+    const fileInput = document.getElementById('fileInput');
+    const uploadState = document.getElementById('uploadState');
+    const processingState = document.getElementById('processingState');
+    const resultState = document.getElementById('resultState');
+    const errorBox = document.getElementById('errorBox');
+    const errorText = document.getElementById('errorText');
+    const transcriptText = document.getElementById('transcriptText');
+
+    // Upload handlers
+    uploadZone.addEventListener('click', () => fileInput.click());
+    
+    fileInput.addEventListener('change', (e) => {
+      if (e.target.files.length > 0) {
+        handleFile(e.target.files[0]);
+      }
+    });
+
+    uploadZone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      uploadZone.classList.add('drag-over');
+    });
+
+    uploadZone.addEventListener('dragleave', () => {
+      uploadZone.classList.remove('drag-over');
+    });
+
+    uploadZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      uploadZone.classList.remove('drag-over');
+      if (e.dataTransfer.files.length > 0) {
+        handleFile(e.dataTransfer.files[0]);
+      }
+    });
+
+    async function handleFile(file) {
+      // Validate file
+      const validExtensions = ['.mp3', '.mp4', '.mpeg', '.mpga', '.m4a', '.wav', '.webm'];
+      const hasValidExtension = validExtensions.some(ext => 
+        file.name.toLowerCase().endsWith(ext)
+      );
+      
+      if (!hasValidExtension && !file.type.startsWith('audio/')) {
+        showError('Please select a valid audio file (MP3, M4A, WAV, MP4, or WEBM)');
+        return;
+      }
+
+      if (file.size > 25 * 1024 * 1024) {
+        showError('File size exceeds 25MB limit.');
+        return;
+      }
+
+      state.fileName = file.name;
+      
+      // Show processing
+      uploadState.style.display = 'none';
+      processingState.classList.add('visible');
+
+      try {
+        // Call transcription endpoint
+        const transcript = await transcribeAudio(file);
+        
+        state.transcript = transcript;
+        transcriptText.textContent = transcript;
+        
+        // Show result
+        processingState.classList.remove('visible');
+        resultState.classList.add('visible');
+
+      } catch (error) {
+        processingState.classList.remove('visible');
+        uploadState.style.display = 'block';
+        showError(error.message || 'Transcription failed. Please try again or contact support.');
+      }
+    }
+
+    async function transcribeAudio(file) {
+      const formData = new FormData();
+      formData.append('audio', file);
+      formData.append('sessionId', state.sessionId);
+      formData.append('fileName', file.name);
+
+      const response = await fetch(CONFIG.endpoints.transcribe, {
+        method: 'POST',
+        body: formData
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || 'Transcription failed');
+      }
+
+      const data = await response.json();
+      return data.transcript;
+    }
+
+    function showError(message) {
+      errorText.textContent = message;
+      errorBox.classList.add('visible');
+    }
+
+    function copyTranscript() {
+      navigator.clipboard.writeText(state.transcript).then(() => {
+        const btn = event.target;
+        const original = btn.innerHTML;
+        btn.innerHTML = '✓ Copied!';
+        setTimeout(() => { btn.innerHTML = original; }, 2000);
+      });
+    }
+
+    function downloadTranscript() {
+      const blob = new Blob([state.transcript], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = (state.fileName.replace(/\.[^/.]+$/, '') || 'transcript') + '.txt';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+  </script>
+</body>
+</html>
+
