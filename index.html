@@ -1590,6 +1590,8 @@
           btn.innerHTML = 'Complete Payment';
           btn.disabled = false;
           state.paymentReady = true;
+          // Scroll to payment form
+          scrollToTool();
         } catch (error) {
           showError(error.message || 'Failed to load payment form');
           btn.disabled = false;
@@ -1687,6 +1689,7 @@
       // Show processing panel
       updateSteps('step3');
       showPanel('processing');
+      scrollToTool();
       
       try {
         // Step 1: Verify payment and get API key
@@ -1713,6 +1716,7 @@
         state.transcript = transcript;
         elements.transcriptText.textContent = transcript;
         showPanel('result');
+        scrollToTool();
         
       } catch (error) {
         console.error('Transcription error:', error);
@@ -1852,6 +1856,15 @@
           }
         });
       });
+    }
+
+    function scrollToTool() {
+      const toolSection = document.getElementById('transcribe');
+      if (toolSection) {
+        setTimeout(() => {
+          toolSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 100);
+      }
     }
   </script>
 </body>
