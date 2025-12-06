@@ -44,6 +44,11 @@
       scroll-behavior: smooth;
     }
 
+    /* Anchor offset for smooth scrolling */
+    [id] {
+      scroll-margin-top: 100px;
+    }
+
     body {
       font-family: var(--font-display);
       background: var(--color-bg);
@@ -1420,6 +1425,19 @@
     // INITIALIZATION
     // ===========================================
     document.addEventListener('DOMContentLoaded', () => {
+      // Handle anchor links with smooth scroll
+      initAnchorLinks();
+      
+      // Handle initial hash on page load
+      if (window.location.hash) {
+        setTimeout(() => {
+          const target = document.querySelector(window.location.hash);
+          if (target) {
+            target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }
+        }, 100);
+      }
+
       // Click to upload
       elements.uploadZone.addEventListener('click', () => {
         elements.fileInput.click();
@@ -1817,6 +1835,23 @@
       const mins = Math.floor(seconds / 60);
       const secs = Math.floor(seconds % 60);
       return `${mins}:${secs.toString().padStart(2, '0')}`;
+    }
+
+    function initAnchorLinks() {
+      document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener('click', function(e) {
+          const href = this.getAttribute('href');
+          if (href === '#') return; // Skip empty anchors
+          
+          const target = document.querySelector(href);
+          if (target) {
+            e.preventDefault();
+            target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            // Update URL without triggering scroll
+            history.pushState(null, null, href);
+          }
+        });
+      });
     }
   </script>
 </body>
