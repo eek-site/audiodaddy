@@ -1,0 +1,1664 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Audio Daddy | Pay-Per-Minute Transcription | No Subscriptions</title>
+  <meta name="description" content="Transcribe audio to text instantly. Pay only for what you use. No subscriptions, no signups, no nonsense. Built by an entrepreneur who was sick of getting ripped off." />
+  <meta name="keywords" content="audio transcription, speech to text, transcribe audio, pay per minute, no subscription" />
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <script src="https://js.stripe.com/v3/"></script>
+  
+  <style>
+    :root {
+      --color-bg: #0a0a0b;
+      --color-surface: #141416;
+      --color-surface-2: #1c1c1f;
+      --color-text: #ffffff;
+      --color-text-muted: #8a8a8d;
+      --color-accent: #00d4aa;
+      --color-accent-glow: rgba(0, 212, 170, 0.3);
+      --color-accent-hover: #00f5c4;
+      --color-warning: #ffc107;
+      --color-border: #2a2a2d;
+      --font-display: 'Outfit', system-ui, sans-serif;
+      --font-mono: 'Space Mono', monospace;
+      --radius: 12px;
+      --radius-lg: 20px;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      font-family: var(--font-display);
+      background: var(--color-bg);
+      color: var(--color-text);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+    }
+
+    /* Animated gradient background */
+    .bg-gradient {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: 
+        radial-gradient(ellipse 80% 50% at 20% -20%, rgba(0, 212, 170, 0.15), transparent),
+        radial-gradient(ellipse 60% 40% at 80% 100%, rgba(0, 150, 136, 0.1), transparent);
+      pointer-events: none;
+      z-index: -1;
+    }
+
+    /* Grid pattern overlay */
+    .bg-grid {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-image: 
+        linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+      background-size: 60px 60px;
+      pointer-events: none;
+      z-index: -1;
+    }
+
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    /* Navigation */
+    nav {
+      padding: 24px 0;
+      position: relative;
+      z-index: 100;
+    }
+
+    .nav-inner {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
+    }
+
+    .logo-icon {
+      width: 44px;
+      height: 44px;
+      background: linear-gradient(135deg, var(--color-accent), #00a080);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.4rem;
+    }
+
+    .logo-text {
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: var(--color-text);
+      letter-spacing: -0.02em;
+    }
+
+    .logo-text span {
+      color: var(--color-accent);
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 32px;
+      list-style: none;
+    }
+
+    .nav-links a {
+      color: var(--color-text-muted);
+      text-decoration: none;
+      font-size: 0.95rem;
+      font-weight: 500;
+      transition: color 0.2s;
+    }
+
+    .nav-links a:hover {
+      color: var(--color-text);
+    }
+
+    /* Hero Section */
+    .hero {
+      padding: 80px 0 60px;
+      text-align: center;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      padding: 8px 16px;
+      border-radius: 100px;
+      font-size: 0.85rem;
+      color: var(--color-text-muted);
+      margin-bottom: 32px;
+    }
+
+    .badge-dot {
+      width: 8px;
+      height: 8px;
+      background: var(--color-accent);
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    .hero h1 {
+      font-size: clamp(2.5rem, 6vw, 4rem);
+      font-weight: 800;
+      line-height: 1.1;
+      letter-spacing: -0.03em;
+      margin-bottom: 24px;
+      background: linear-gradient(135deg, #fff 0%, #ccc 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .hero h1 .accent {
+      background: linear-gradient(135deg, var(--color-accent), var(--color-accent-hover));
+      -webkit-background-clip: text;
+      background-clip: text;
+    }
+
+    .hero-subtitle {
+      font-size: 1.25rem;
+      color: var(--color-text-muted);
+      max-width: 600px;
+      margin: 0 auto 40px;
+      font-weight: 400;
+    }
+
+    .hero-price {
+      display: inline-flex;
+      align-items: baseline;
+      gap: 8px;
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      padding: 16px 32px;
+      border-radius: var(--radius);
+      margin-bottom: 40px;
+    }
+
+    .hero-price .amount {
+      font-family: var(--font-mono);
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--color-accent);
+    }
+
+    .hero-price .unit {
+      font-size: 1rem;
+      color: var(--color-text-muted);
+    }
+
+    /* Transcription Tool Section */
+    .tool-section {
+      padding: 40px 0 80px;
+    }
+
+    .tool-card {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      max-width: 700px;
+      margin: 0 auto;
+    }
+
+    /* Steps indicator */
+    .steps {
+      display: flex;
+      padding: 20px 24px;
+      border-bottom: 1px solid var(--color-border);
+      background: var(--color-surface-2);
+    }
+
+    .step {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: var(--color-text-muted);
+      transition: color 0.3s ease;
+    }
+
+    .step.active {
+      color: var(--color-text);
+    }
+
+    .step.complete {
+      color: var(--color-accent);
+    }
+
+    .step-number {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: var(--color-border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.8rem;
+      font-weight: 600;
+      font-family: var(--font-mono);
+      transition: all 0.3s ease;
+    }
+
+    .step.active .step-number {
+      background: var(--color-accent);
+      color: var(--color-bg);
+    }
+
+    .step.complete .step-number {
+      background: var(--color-accent);
+      color: var(--color-bg);
+    }
+
+    /* Panels */
+    .panel {
+      padding: 40px 32px;
+      display: none;
+    }
+
+    .panel.active {
+      display: block;
+      animation: fadeIn 0.4s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Upload Zone */
+    .upload-zone {
+      border: 2px dashed var(--color-border);
+      border-radius: var(--radius);
+      padding: 60px 32px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      background: rgba(0, 212, 170, 0.02);
+    }
+
+    .upload-zone:hover,
+    .upload-zone.drag-over {
+      border-color: var(--color-accent);
+      background: rgba(0, 212, 170, 0.05);
+    }
+
+    .upload-icon {
+      width: 72px;
+      height: 72px;
+      margin: 0 auto 20px;
+      background: linear-gradient(135deg, var(--color-accent), #00a080);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2rem;
+    }
+
+    .upload-zone h3 {
+      font-size: 1.3rem;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    .upload-zone p {
+      color: var(--color-text-muted);
+      font-size: 0.95rem;
+    }
+
+    .upload-zone input {
+      display: none;
+    }
+
+    .formats {
+      margin-top: 24px;
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .format-tag {
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      padding: 6px 12px;
+      background: var(--color-surface-2);
+      border-radius: 6px;
+      color: var(--color-text-muted);
+    }
+
+    /* Price Panel */
+    .file-summary {
+      background: var(--color-surface-2);
+      border-radius: var(--radius);
+      padding: 20px;
+      margin-bottom: 28px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .file-icon {
+      width: 52px;
+      height: 52px;
+      background: linear-gradient(135deg, var(--color-accent), #00a080);
+      border-radius: var(--radius);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.4rem;
+      flex-shrink: 0;
+    }
+
+    .file-details {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .file-name {
+      font-weight: 600;
+      font-size: 0.95rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .file-meta {
+      font-size: 0.85rem;
+      color: var(--color-text-muted);
+      font-family: var(--font-mono);
+    }
+
+    .price-display {
+      text-align: center;
+      padding: 40px 0;
+      border-top: 1px solid var(--color-border);
+      border-bottom: 1px solid var(--color-border);
+      margin-bottom: 28px;
+    }
+
+    .price-label {
+      font-size: 0.9rem;
+      color: var(--color-text-muted);
+      margin-bottom: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+    }
+
+    .price-amount {
+      font-family: var(--font-mono);
+      font-size: 3.5rem;
+      font-weight: 700;
+      color: var(--color-accent);
+      letter-spacing: -0.02em;
+    }
+
+    .price-amount .currency {
+      font-size: 1.8rem;
+      vertical-align: super;
+      margin-right: 4px;
+      color: var(--color-text-muted);
+    }
+
+    .rate-info {
+      font-size: 0.85rem;
+      color: var(--color-text-muted);
+      margin-top: 12px;
+      font-family: var(--font-mono);
+    }
+
+    /* Buttons */
+    .btn {
+      width: 100%;
+      padding: 18px 28px;
+      font-family: var(--font-display);
+      font-size: 1rem;
+      font-weight: 600;
+      border: none;
+      border-radius: var(--radius);
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--color-accent), #00a080);
+      color: var(--color-bg);
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px var(--color-accent-glow);
+    }
+
+    .btn-primary:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .btn-secondary {
+      background: transparent;
+      color: var(--color-text-muted);
+      border: 1px solid var(--color-border);
+      margin-top: 12px;
+    }
+
+    .btn-secondary:hover {
+      background: var(--color-surface-2);
+      color: var(--color-text);
+    }
+
+    .spinner {
+      width: 20px;
+      height: 20px;
+      border: 2px solid rgba(0,0,0,0.2);
+      border-top-color: var(--color-bg);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* Processing Panel */
+    .processing-content {
+      text-align: center;
+      padding: 60px 0;
+    }
+
+    .processing-animation {
+      width: 100px;
+      height: 100px;
+      margin: 0 auto 32px;
+      position: relative;
+    }
+
+    .processing-animation::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border: 3px solid var(--color-border);
+      border-top-color: var(--color-accent);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    .processing-animation::after {
+      content: "🎧";
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2.5rem;
+    }
+
+    .processing-content h3 {
+      font-size: 1.4rem;
+      margin-bottom: 10px;
+    }
+
+    .processing-content p {
+      color: var(--color-text-muted);
+    }
+
+    /* Result Panel */
+    .result-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+
+    .result-header h3 {
+      font-size: 1.2rem;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: var(--color-accent);
+    }
+
+    .result-actions {
+      display: flex;
+      gap: 10px;
+    }
+
+    .btn-icon {
+      padding: 12px 18px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      background: var(--color-surface-2);
+      border: 1px solid var(--color-border);
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--color-text);
+    }
+
+    .btn-icon:hover {
+      background: var(--color-border);
+    }
+
+    .transcript-box {
+      background: var(--color-surface-2);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius);
+      padding: 28px;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+
+    .transcript-text {
+      font-size: 1rem;
+      line-height: 1.9;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      color: var(--color-text);
+    }
+
+    .new-transcription {
+      margin-top: 28px;
+      text-align: center;
+    }
+
+    .new-transcription a {
+      color: var(--color-accent);
+      text-decoration: none;
+      font-weight: 500;
+    }
+
+    .new-transcription a:hover {
+      text-decoration: underline;
+    }
+
+    /* Error */
+    .error-box {
+      background: rgba(255, 100, 100, 0.1);
+      border: 1px solid rgba(255, 100, 100, 0.3);
+      border-radius: var(--radius);
+      padding: 20px;
+      margin: 0 32px 0;
+      display: none;
+    }
+
+    .error-box.visible {
+      display: block;
+    }
+
+    .error-box h4 {
+      color: #ff6b6b;
+      font-size: 0.95rem;
+      margin-bottom: 6px;
+    }
+
+    .error-box p {
+      color: var(--color-text-muted);
+      font-size: 0.9rem;
+    }
+
+    /* Story Section */
+    .story-section {
+      padding: 100px 0;
+      border-top: 1px solid var(--color-border);
+    }
+
+    .story-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 80px;
+      align-items: center;
+    }
+
+    .story-content h2 {
+      font-size: 2.2rem;
+      font-weight: 700;
+      margin-bottom: 24px;
+      letter-spacing: -0.02em;
+    }
+
+    .story-content p {
+      color: var(--color-text-muted);
+      font-size: 1.1rem;
+      margin-bottom: 20px;
+      line-height: 1.8;
+    }
+
+    .story-content .signature {
+      margin-top: 32px;
+      padding-top: 24px;
+      border-top: 1px solid var(--color-border);
+    }
+
+    .story-content .signature-name {
+      font-weight: 600;
+      font-size: 1.1rem;
+      color: var(--color-text);
+    }
+
+    .story-content .signature-title {
+      color: var(--color-text-muted);
+      font-size: 0.9rem;
+    }
+
+    .story-visual {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      padding: 40px;
+      text-align: center;
+    }
+
+    .story-visual .big-emoji {
+      font-size: 5rem;
+      margin-bottom: 24px;
+    }
+
+    .story-visual .quote {
+      font-size: 1.3rem;
+      font-style: italic;
+      color: var(--color-text);
+      line-height: 1.6;
+    }
+
+    .story-visual .quote-mark {
+      color: var(--color-accent);
+      font-size: 2rem;
+    }
+
+    /* Features */
+    .features-section {
+      padding: 80px 0;
+      border-top: 1px solid var(--color-border);
+    }
+
+    .features-section h2 {
+      text-align: center;
+      font-size: 2rem;
+      margin-bottom: 60px;
+    }
+
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 32px;
+    }
+
+    .feature-card {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius);
+      padding: 32px;
+      transition: all 0.3s ease;
+    }
+
+    .feature-card:hover {
+      border-color: var(--color-accent);
+      transform: translateY(-4px);
+    }
+
+    .feature-icon {
+      font-size: 2.5rem;
+      margin-bottom: 20px;
+    }
+
+    .feature-card h3 {
+      font-size: 1.15rem;
+      margin-bottom: 12px;
+    }
+
+    .feature-card p {
+      color: var(--color-text-muted);
+      font-size: 0.95rem;
+      line-height: 1.6;
+    }
+
+    /* Contact Section */
+    .contact-section {
+      padding: 100px 0;
+      border-top: 1px solid var(--color-border);
+    }
+
+    .contact-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 80px;
+    }
+
+    .contact-info h2 {
+      font-size: 2rem;
+      margin-bottom: 20px;
+    }
+
+    .contact-info p {
+      color: var(--color-text-muted);
+      font-size: 1.05rem;
+      margin-bottom: 32px;
+      line-height: 1.7;
+    }
+
+    .contact-details {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius);
+      padding: 28px;
+    }
+
+    .contact-details h4 {
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--color-text-muted);
+      margin-bottom: 16px;
+    }
+
+    .contact-details p {
+      font-size: 0.95rem;
+      margin-bottom: 8px;
+      color: var(--color-text);
+    }
+
+    .contact-details a {
+      color: var(--color-accent);
+      text-decoration: none;
+    }
+
+    .contact-details a:hover {
+      text-decoration: underline;
+    }
+
+    .contact-form {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      padding: 40px;
+    }
+
+    .form-group {
+      margin-bottom: 24px;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 0.9rem;
+      font-weight: 500;
+      margin-bottom: 10px;
+      color: var(--color-text);
+    }
+
+    .form-group input,
+    .form-group textarea {
+      width: 100%;
+      padding: 14px 18px;
+      background: var(--color-surface-2);
+      border: 1px solid var(--color-border);
+      border-radius: 8px;
+      color: var(--color-text);
+      font-family: var(--font-display);
+      font-size: 1rem;
+      transition: border-color 0.2s;
+    }
+
+    .form-group input:focus,
+    .form-group textarea:focus {
+      outline: none;
+      border-color: var(--color-accent);
+    }
+
+    .form-group textarea {
+      min-height: 140px;
+      resize: vertical;
+    }
+
+    .form-success {
+      display: none;
+      text-align: center;
+      padding: 40px;
+    }
+
+    .form-success.visible {
+      display: block;
+    }
+
+    .form-success .icon {
+      font-size: 3rem;
+      margin-bottom: 16px;
+    }
+
+    .form-success h3 {
+      font-size: 1.3rem;
+      margin-bottom: 8px;
+    }
+
+    .form-success p {
+      color: var(--color-text-muted);
+    }
+
+    /* Footer */
+    footer {
+      border-top: 1px solid var(--color-border);
+      padding: 60px 0 40px;
+      background: var(--color-surface);
+    }
+
+    .footer-grid {
+      display: grid;
+      grid-template-columns: 2fr 1fr 1fr 1fr;
+      gap: 60px;
+      margin-bottom: 60px;
+    }
+
+    .footer-brand .logo {
+      margin-bottom: 20px;
+    }
+
+    .footer-brand p {
+      color: var(--color-text-muted);
+      font-size: 0.95rem;
+      line-height: 1.7;
+      max-width: 300px;
+    }
+
+    .footer-col h4 {
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--color-text-muted);
+      margin-bottom: 20px;
+    }
+
+    .footer-col ul {
+      list-style: none;
+    }
+
+    .footer-col li {
+      margin-bottom: 12px;
+    }
+
+    .footer-col a {
+      color: var(--color-text);
+      text-decoration: none;
+      font-size: 0.95rem;
+      transition: color 0.2s;
+    }
+
+    .footer-col a:hover {
+      color: var(--color-accent);
+    }
+
+    .footer-bottom {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-top: 40px;
+      border-top: 1px solid var(--color-border);
+      flex-wrap: wrap;
+      gap: 20px;
+    }
+
+    .footer-legal {
+      color: var(--color-text-muted);
+      font-size: 0.85rem;
+    }
+
+    .footer-legal a {
+      color: var(--color-text-muted);
+      text-decoration: none;
+    }
+
+    .footer-legal a:hover {
+      color: var(--color-accent);
+    }
+
+    .company-badge {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: var(--color-surface-2);
+      border: 1px solid var(--color-border);
+      padding: 12px 20px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      color: var(--color-text-muted);
+    }
+
+    .company-badge img {
+      height: 20px;
+    }
+
+    .company-badge a {
+      color: var(--color-accent);
+      text-decoration: none;
+    }
+
+    .company-badge a:hover {
+      text-decoration: underline;
+    }
+
+    /* Responsive */
+    @media (max-width: 968px) {
+      .story-grid,
+      .contact-grid,
+      .footer-grid {
+        grid-template-columns: 1fr;
+        gap: 40px;
+      }
+
+      .features-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .nav-links {
+        display: none;
+      }
+    }
+
+    @media (max-width: 600px) {
+      .hero {
+        padding: 60px 0 40px;
+      }
+
+      .hero h1 {
+        font-size: 2rem;
+      }
+
+      .panel {
+        padding: 28px 20px;
+      }
+
+      .steps {
+        padding: 16px;
+      }
+
+      .step-text {
+        display: none;
+      }
+
+      .price-amount {
+        font-size: 2.5rem;
+      }
+
+      .footer-bottom {
+        flex-direction: column;
+        text-align: center;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="bg-gradient"></div>
+  <div class="bg-grid"></div>
+
+  <!-- Navigation -->
+  <nav>
+    <div class="container">
+      <div class="nav-inner">
+        <a href="/" class="logo">
+          <div class="logo-icon">🎧</div>
+          <div class="logo-text">audio<span>daddy</span></div>
+        </a>
+        <ul class="nav-links">
+          <li><a href="#transcribe">Transcribe</a></li>
+          <li><a href="#story">Our Story</a></li>
+          <li><a href="#contact">Contact</a></li>
+        </ul>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Hero Section -->
+  <section class="hero">
+    <div class="container">
+      <div class="badge">
+        <span class="badge-dot"></span>
+        No subscriptions. No signups. No nonsense.
+      </div>
+      <h1>Audio to text,<br><span class="accent">pay only for what you use</span></h1>
+      <p class="hero-subtitle">Upload your recording. See the price. Pay. Get your transcript. It's that simple.</p>
+      <div class="hero-price">
+        <span class="amount">£0.12</span>
+        <span class="unit">per minute</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Transcription Tool -->
+  <section class="tool-section" id="transcribe">
+    <div class="container">
+      <div class="tool-card">
+        <!-- Steps -->
+        <div class="steps">
+          <div class="step active" id="step1">
+            <span class="step-number">1</span>
+            <span class="step-text">Upload</span>
+          </div>
+          <div class="step" id="step2">
+            <span class="step-number">2</span>
+            <span class="step-text">Pay</span>
+          </div>
+          <div class="step" id="step3">
+            <span class="step-number">3</span>
+            <span class="step-text">Done</span>
+          </div>
+        </div>
+
+        <!-- Error Box -->
+        <div class="error-box" id="errorBox">
+          <h4>⚠️ Something went wrong</h4>
+          <p id="errorText"></p>
+        </div>
+
+        <!-- Panel 1: Upload -->
+        <div class="panel active" id="panelUpload">
+          <div class="upload-zone" id="uploadZone">
+            <div class="upload-icon">🎵</div>
+            <h3>Drop your audio file here</h3>
+            <p>or click to browse</p>
+            <input type="file" id="fileInput" accept="audio/*,.mp3,.mp4,.mpeg,.mpga,.m4a,.wav,.webm" />
+            <div class="formats">
+              <span class="format-tag">MP3</span>
+              <span class="format-tag">M4A</span>
+              <span class="format-tag">WAV</span>
+              <span class="format-tag">MP4</span>
+              <span class="format-tag">WEBM</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Panel 2: Price & Pay -->
+        <div class="panel" id="panelPrice">
+          <div class="file-summary">
+            <div class="file-icon">🎧</div>
+            <div class="file-details">
+              <div class="file-name" id="fileName"></div>
+              <div class="file-meta" id="fileMeta"></div>
+            </div>
+          </div>
+
+          <div class="price-display">
+            <div class="price-label">Your total</div>
+            <div class="price-amount">
+              <span class="currency">£</span><span id="priceValue">0.00</span>
+            </div>
+            <div class="rate-info"><span id="durationText">0:00</span> @ £0.12/min</div>
+          </div>
+
+          <button class="btn btn-primary" id="payBtn" onclick="processPayment()">
+            Pay & Transcribe
+          </button>
+          <button class="btn btn-secondary" onclick="resetToUpload()">
+            Choose different file
+          </button>
+        </div>
+
+        <!-- Panel 3: Processing -->
+        <div class="panel" id="panelProcessing">
+          <div class="processing-content">
+            <div class="processing-animation"></div>
+            <h3>Transcribing your audio...</h3>
+            <p id="processingStatus">This usually takes a few seconds</p>
+          </div>
+        </div>
+
+        <!-- Panel 4: Result -->
+        <div class="panel" id="panelResult">
+          <div class="result-header">
+            <h3>✓ Transcription complete</h3>
+            <div class="result-actions">
+              <button class="btn-icon" onclick="copyTranscript()">📋 Copy</button>
+              <button class="btn-icon" onclick="downloadTranscript()">💾 Download</button>
+            </div>
+          </div>
+          <div class="transcript-box">
+            <div class="transcript-text" id="transcriptText"></div>
+          </div>
+          <div class="new-transcription">
+            <a href="#" onclick="resetToUpload(); return false;">Transcribe another file →</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Story Section -->
+  <section class="story-section" id="story">
+    <div class="container">
+      <div class="story-grid">
+        <div class="story-content">
+          <h2>Why I built this</h2>
+          <p>I run a roadside assistance company. For compliance, I need to keep records of phone calls with customers. Turning those recordings into text was costing me a fortune.</p>
+          <p>Every transcription service wanted me on a monthly subscription. £30 here, £50 there. I don't need 500 minutes a month—I just need to transcribe a few calls when I need to.</p>
+          <p>So I built exactly what I wanted: upload a file, see the price upfront, pay for just that file, get the transcript. No accounts. No recurring charges. No nonsense.</p>
+          <p>If it's useful to you too, brilliant. If it's rubbish, tell me—I'll fix it.</p>
+          <div class="signature">
+            <div class="signature-name">Mr Profit</div>
+            <div class="signature-title">Founder & Chief Audio Daddy</div>
+          </div>
+        </div>
+        <div class="story-visual">
+          <div class="big-emoji">😤</div>
+          <p class="quote">
+            <span class="quote-mark">"</span>I just want to pay for what I use. Is that too much to ask?<span class="quote-mark">"</span>
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Features -->
+  <section class="features-section">
+    <div class="container">
+      <h2>Simple. Honest. Done.</h2>
+      <div class="features-grid">
+        <div class="feature-card">
+          <div class="feature-icon">💰</div>
+          <h3>Pay per minute</h3>
+          <p>£0.12 per minute of audio. No minimum. No subscription. Just pay for what you transcribe.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">⚡</div>
+          <h3>Instant results</h3>
+          <p>Powered by OpenAI Whisper, one of the most accurate transcription engines on the planet.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">🔒</div>
+          <h3>Private & secure</h3>
+          <p>Your audio is processed and deleted. We don't store your files or transcripts.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">🌍</div>
+          <h3>Any language</h3>
+          <p>Whisper supports 50+ languages. Auto-detected from your audio.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">📱</div>
+          <h3>Works everywhere</h3>
+          <p>Desktop, tablet, phone. No app to download. Just open the website.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">🤝</div>
+          <h3>Human support</h3>
+          <p>Got a question? Send me a message. I actually reply.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Contact Section -->
+  <section class="contact-section" id="contact">
+    <div class="container">
+      <div class="contact-grid">
+        <div class="contact-info">
+          <h2>Get in touch</h2>
+          <p>Got feedback? Found a bug? Want to tell me this is the best thing since sliced bread? Or the worst? I want to hear it.</p>
+          <div class="contact-details">
+            <h4>Company Details</h4>
+            <p><strong>Road and Rescue Ltd</strong></p>
+            <p>Company No: 16401492</p>
+            <p>71-75 Shelton Street, Covent Garden</p>
+            <p>London, WC2H 9JQ, United Kingdom</p>
+            <p style="margin-top: 16px;">
+              <a href="https://find-and-update.company-information.service.gov.uk/company/16401492" target="_blank" rel="noopener">View on Companies House →</a>
+            </p>
+          </div>
+        </div>
+        <div class="contact-form" id="contactFormContainer">
+          <form id="contactForm" onsubmit="submitContactForm(event)">
+            <div class="form-group">
+              <label for="contactName">Your name</label>
+              <input type="text" id="contactName" name="name" required placeholder="John Smith" />
+            </div>
+            <div class="form-group">
+              <label for="contactEmail">Email address</label>
+              <input type="email" id="contactEmail" name="email" required placeholder="john@example.com" />
+            </div>
+            <div class="form-group">
+              <label for="contactMessage">Message</label>
+              <textarea id="contactMessage" name="message" required placeholder="Tell me what you think..."></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary" id="contactSubmitBtn">
+              Send Message
+            </button>
+          </form>
+          <div class="form-success" id="formSuccess">
+            <div class="icon">✅</div>
+            <h3>Message sent!</h3>
+            <p>I'll get back to you as soon as I can.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer>
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-brand">
+          <a href="/" class="logo">
+            <div class="logo-icon">🎧</div>
+            <div class="logo-text">audio<span>daddy</span></div>
+          </a>
+          <p>Pay-per-minute audio transcription. Built by an entrepreneur who was sick of subscriptions.</p>
+        </div>
+        <div class="footer-col">
+          <h4>Product</h4>
+          <ul>
+            <li><a href="#transcribe">Transcribe</a></li>
+            <li><a href="#story">Our Story</a></li>
+            <li><a href="#contact">Contact</a></li>
+          </ul>
+        </div>
+        <div class="footer-col">
+          <h4>Legal</h4>
+          <ul>
+            <li><a href="/privacy">Privacy Policy</a></li>
+            <li><a href="/terms">Terms of Service</a></li>
+            <li><a href="/refunds">Refund Policy</a></li>
+          </ul>
+        </div>
+        <div class="footer-col">
+          <h4>Other Projects</h4>
+          <ul>
+            <li><a href="https://www.eekmechanical.co.nz" target="_blank">EEK Mechanical</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <div class="footer-legal">
+          © 2025 Road and Rescue Ltd. All rights reserved. | 
+          <a href="https://find-and-update.company-information.service.gov.uk/company/16401492" target="_blank">Company No: 16401492</a>
+        </div>
+        <div class="company-badge">
+          🇬🇧 Registered in England & Wales
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    // ===========================================
+    // CONFIGURATION
+    // ===========================================
+    const CONFIG = {
+      // Pricing (GBP)
+      ratePerMinute: 0.12,
+      currency: 'GBP',
+      currencySymbol: '£',
+      
+      // Stripe fees (UK)
+      stripePercent: 0.029,
+      stripeFixed: 0.20,
+      
+      // Max file size (25MB)
+      maxFileSize: 25 * 1024 * 1024,
+      
+      // Endpoints (replace with your actual endpoints)
+      endpoints: {
+        createPayment: '/api/create-payment-intent',
+        transcribe: '/api/transcribe',
+        contact: 'YOUR_POWER_AUTOMATE_CONTACT_ENDPOINT'
+      }
+    };
+
+    // ===========================================
+    // STATE
+    // ===========================================
+    let state = {
+      file: null,
+      duration: 0,
+      price: 0,
+      transcript: ''
+    };
+
+    // ===========================================
+    // DOM ELEMENTS
+    // ===========================================
+    const elements = {
+      uploadZone: document.getElementById('uploadZone'),
+      fileInput: document.getElementById('fileInput'),
+      fileName: document.getElementById('fileName'),
+      fileMeta: document.getElementById('fileMeta'),
+      priceValue: document.getElementById('priceValue'),
+      durationText: document.getElementById('durationText'),
+      payBtn: document.getElementById('payBtn'),
+      transcriptText: document.getElementById('transcriptText'),
+      errorBox: document.getElementById('errorBox'),
+      errorText: document.getElementById('errorText'),
+      panels: {
+        upload: document.getElementById('panelUpload'),
+        price: document.getElementById('panelPrice'),
+        processing: document.getElementById('panelProcessing'),
+        result: document.getElementById('panelResult')
+      },
+      steps: {
+        step1: document.getElementById('step1'),
+        step2: document.getElementById('step2'),
+        step3: document.getElementById('step3')
+      }
+    };
+
+    // ===========================================
+    // INITIALIZATION
+    // ===========================================
+    document.addEventListener('DOMContentLoaded', () => {
+      // Click to upload
+      elements.uploadZone.addEventListener('click', () => {
+        elements.fileInput.click();
+      });
+
+      // File input change
+      elements.fileInput.addEventListener('change', (e) => {
+        if (e.target.files.length > 0) {
+          handleFile(e.target.files[0]);
+        }
+      });
+
+      // Drag and drop
+      elements.uploadZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        elements.uploadZone.classList.add('drag-over');
+      });
+
+      elements.uploadZone.addEventListener('dragleave', () => {
+        elements.uploadZone.classList.remove('drag-over');
+      });
+
+      elements.uploadZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        elements.uploadZone.classList.remove('drag-over');
+        if (e.dataTransfer.files.length > 0) {
+          handleFile(e.dataTransfer.files[0]);
+        }
+      });
+    });
+
+    // ===========================================
+    // FILE HANDLING
+    // ===========================================
+    function handleFile(file) {
+      hideError();
+
+      // Validate file type
+      const validExtensions = ['.mp3', '.mp4', '.mpeg', '.mpga', '.m4a', '.wav', '.webm'];
+      const hasValidExtension = validExtensions.some(ext => 
+        file.name.toLowerCase().endsWith(ext)
+      );
+      
+      if (!hasValidExtension && !file.type.startsWith('audio/')) {
+        showError('Please select a valid audio file (MP3, M4A, WAV, MP4, or WEBM)');
+        return;
+      }
+
+      // Validate file size
+      if (file.size > CONFIG.maxFileSize) {
+        showError('File size exceeds 25MB limit. Please use a smaller file.');
+        return;
+      }
+
+      state.file = file;
+
+      // Get duration from audio file
+      const audio = new Audio();
+      audio.src = URL.createObjectURL(file);
+      
+      audio.addEventListener('loadedmetadata', () => {
+        state.duration = audio.duration;
+        URL.revokeObjectURL(audio.src);
+        calculatePrice();
+        showPricePanel();
+      });
+
+      audio.addEventListener('error', () => {
+        // Estimate from file size if can't read metadata
+        state.duration = (file.size / (1024 * 1024)) * 60;
+        calculatePrice();
+        showPricePanel();
+      });
+    }
+
+    // ===========================================
+    // PRICING
+    // ===========================================
+    function calculatePrice() {
+      const minutes = state.duration / 60;
+      const baseRevenue = minutes * CONFIG.ratePerMinute;
+      
+      // Add Stripe fees
+      const totalCharge = (baseRevenue + CONFIG.stripeFixed) / (1 - CONFIG.stripePercent);
+      
+      // Round up, minimum £0.50
+      state.price = Math.max(0.50, Math.round(totalCharge * 100) / 100);
+    }
+
+    // ===========================================
+    // UI NAVIGATION
+    // ===========================================
+    function showPanel(panelName) {
+      Object.values(elements.panels).forEach(panel => {
+        panel.classList.remove('active');
+      });
+      elements.panels[panelName].classList.add('active');
+    }
+
+    function updateSteps(currentStep) {
+      const stepOrder = ['step1', 'step2', 'step3'];
+      const currentIndex = stepOrder.indexOf(currentStep);
+
+      stepOrder.forEach((step, index) => {
+        elements.steps[step].classList.remove('active', 'complete');
+        if (index < currentIndex) {
+          elements.steps[step].classList.add('complete');
+        } else if (index === currentIndex) {
+          elements.steps[step].classList.add('active');
+        }
+      });
+    }
+
+    function showPricePanel() {
+      elements.fileName.textContent = state.file.name;
+      elements.fileMeta.textContent = formatFileSize(state.file.size);
+      elements.priceValue.textContent = state.price.toFixed(2);
+      elements.durationText.textContent = formatDuration(state.duration);
+
+      updateSteps('step2');
+      showPanel('price');
+    }
+
+    function resetToUpload() {
+      state = { file: null, duration: 0, price: 0, transcript: '' };
+      elements.fileInput.value = '';
+      hideError();
+      updateSteps('step1');
+      showPanel('upload');
+    }
+
+    // ===========================================
+    // PAYMENT & TRANSCRIPTION
+    // ===========================================
+    async function processPayment() {
+      const btn = elements.payBtn;
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner"></span> Processing...';
+
+      try {
+        // Simulate payment (replace with real Stripe integration)
+        await simulatePayment();
+        
+        updateSteps('step3');
+        showPanel('processing');
+        
+        // Transcribe (replace with actual API)
+        const transcript = await transcribeAudio();
+        
+        state.transcript = transcript;
+        elements.transcriptText.textContent = transcript;
+        showPanel('result');
+
+      } catch (error) {
+        showError(error.message || 'Payment failed. Please try again.');
+        showPanel('price');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = 'Pay & Transcribe';
+      }
+    }
+
+    async function simulatePayment() {
+      return new Promise((resolve) => {
+        setTimeout(resolve, 1500);
+      });
+    }
+
+    async function transcribeAudio() {
+      return new Promise((resolve) => {
+        setTimeout(() => {
+          resolve("This is a sample transcript. In production, this would be the actual transcribed text from your audio file.\n\nYour backend would handle the OpenAI Whisper API call and return the real transcript here.");
+        }, 2000);
+      });
+    }
+
+    // ===========================================
+    // RESULT ACTIONS
+    // ===========================================
+    function copyTranscript() {
+      navigator.clipboard.writeText(state.transcript).then(() => {
+        const btn = event.target.closest('.btn-icon');
+        const original = btn.innerHTML;
+        btn.innerHTML = '✓ Copied!';
+        setTimeout(() => { btn.innerHTML = original; }, 2000);
+      });
+    }
+
+    function downloadTranscript() {
+      const blob = new Blob([state.transcript], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = (state.file?.name?.replace(/\.[^/.]+$/, '') || 'transcript') + '.txt';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+
+    // ===========================================
+    // CONTACT FORM
+    // ===========================================
+    async function submitContactForm(e) {
+      e.preventDefault();
+      
+      const btn = document.getElementById('contactSubmitBtn');
+      const form = document.getElementById('contactForm');
+      const success = document.getElementById('formSuccess');
+      
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner"></span> Sending...';
+      
+      const formData = {
+        name: document.getElementById('contactName').value,
+        email: document.getElementById('contactEmail').value,
+        message: document.getElementById('contactMessage').value,
+        source: 'audiodaddy.co.uk'
+      };
+
+      try {
+        // Replace with your Power Automate endpoint
+        // await fetch(CONFIG.endpoints.contact, {
+        //   method: 'POST',
+        //   headers: { 'Content-Type': 'application/json' },
+        //   body: JSON.stringify(formData)
+        // });
+
+        // Simulate for now
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        form.style.display = 'none';
+        success.classList.add('visible');
+        
+      } catch (error) {
+        alert('Failed to send message. Please try again.');
+        btn.disabled = false;
+        btn.innerHTML = 'Send Message';
+      }
+    }
+
+    // ===========================================
+    // ERROR HANDLING
+    // ===========================================
+    function showError(message) {
+      elements.errorText.textContent = message;
+      elements.errorBox.classList.add('visible');
+    }
+
+    function hideError() {
+      elements.errorBox.classList.remove('visible');
+    }
+
+    // ===========================================
+    // UTILITIES
+    // ===========================================
+    function formatFileSize(bytes) {
+      if (bytes < 1024) return bytes + ' B';
+      if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+      return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
+    }
+
+    function formatDuration(seconds) {
+      const mins = Math.floor(seconds / 60);
+      const secs = Math.floor(seconds % 60);
+      return `${mins}:${secs.toString().padStart(2, '0')}`;
+    }
+  </script>
+</body>
+</html>
