@@ -1154,8 +1154,8 @@
       <h1>Audio to text,<br><span class="accent">pay only for what you use</span></h1>
       <p class="hero-subtitle">Upload your recording. See the price. Pay. Get your transcript. It's that simple.</p>
       <div class="hero-price">
-        <span class="amount">£0.12</span>
-        <span class="unit">per minute</span>
+        <span class="amount">From £4</span>
+        <span class="unit">per transcription</span>
       </div>
     </div>
   </section>
@@ -1218,7 +1218,7 @@
             <div class="price-amount">
               <span class="currency">£</span><span id="priceValue">0.00</span>
             </div>
-            <div class="rate-info"><span id="durationText">0:00</span> @ £0.12/min</div>
+            <div class="rate-info"><span id="durationText">0:00</span> of audio</div>
           </div>
 
           <!-- Payment Form -->
@@ -1297,7 +1297,7 @@
         <div class="feature-card">
           <div class="feature-icon">💰</div>
           <h3>Pay per minute</h3>
-          <p>£0.12 per minute of audio. No minimum. No subscription. Just pay for what you transcribe.</p>
+          <p>From £4 per transcription. No subscription. Just pay for what you use.</p>
         </div>
         <div class="feature-card">
           <div class="feature-icon">⚡</div>
@@ -1486,7 +1486,7 @@
     // ===========================================
     const CONFIG = {
       // Pricing (GBP)
-      ratePerMinute: 0.12,
+      ratePerMinute: 0.24,
       currency: 'GBP',
       currencySymbol: '£',
       
@@ -1498,8 +1498,11 @@
       // Support contact (required for Stripe)
       supportPhone: '+447501250720',
       
-      // Max file size (25MB)
-      maxFileSize: 25 * 1024 * 1024,
+      // Max file size (500MB - we handle chunking for large files)
+      maxFileSize: 500 * 1024 * 1024,
+      
+      // Whisper API limit per chunk
+      maxChunkSize: 24 * 1024 * 1024, // 24MB to be safe
       
       // Power Automate endpoints
       endpoints: {
@@ -1626,7 +1629,7 @@
 
       // Validate file size
       if (file.size > CONFIG.maxFileSize) {
-        showError('File size exceeds 25MB limit. Please use a smaller file.');
+        showError('File size exceeds 500MB limit. Please use a smaller file.');
         return;
       }
 
@@ -1644,10 +1647,8 @@
       });
 
       audio.addEventListener('error', () => {
-        // Estimate from file size if can't read metadata
-        state.duration = (file.size / (1024 * 1024)) * 60;
-        calculatePrice();
-        showPricePanel();
+        // Don't estimate - require exact duration
+        showError('Could not read audio file duration. Please try a different file format (MP3, M4A, or WAV recommended).');
       });
     }
 
@@ -1661,8 +1662,8 @@
       // Add Stripe fees
       const totalCharge = (baseRevenue + CONFIG.stripeFixed) / (1 - CONFIG.stripePercent);
       
-      // Round up, minimum £0.50
-      state.price = Math.max(0.50, Math.round(totalCharge * 100) / 100);
+      // Round up, minimum £4.00
+      state.price = Math.max(4.00, Math.round(totalCharge * 100) / 100);
     }
 
     // ===========================================
@@ -1817,13 +1818,14 @@
       
       if (paymentIntent.status === 'succeeded') {
         // Payment successful - now verify and transcribe
-        await processTranscription(paymentIntent.id);
+        // Pass the actual amount paid (in pence) so we can limit transcription
+        await processTranscription(paymentIntent.id, paymentIntent.amount);
       } else {
         throw new Error('Payment was not completed');
       }
     }
     
-    async function processTranscription(intentId) {
+    async function processTranscription(intentId, amountPaidPence) {
       // Show processing panel
       updateSteps('step3');
       showPanel('processing');
@@ -1845,14 +1847,30 @@
           throw new Error('Payment verification failed');
         }
         
-        // Step 2: Transcribe with OpenAI
+        // Step 2: Calculate max duration based on what they actually paid
+        const amountPaid = amountPaidPence / 100; // Convert pence to pounds
+        const netAfterFees = (amountPaid - CONFIG.stripeFixed) * (1 - CONFIG.stripePercent);
+        const maxMinutesPaid = netAfterFees / CONFIG.ratePerMinute;
+        const maxSecondsPaid = maxMinutesPaid * 60 * 1.10; // 10% buffer for customer's benefit
+        
+        // If payment covers the file duration (or more), transcribe everything
+        // Otherwise, only transcribe what they paid for
+        const maxDuration = maxSecondsPaid >= state.duration ? null : maxSecondsPaid;
+        
+        // Step 3: Transcribe with OpenAI (respecting the limit if set)
         document.getElementById('processingStatus').textContent = 'Transcribing your audio...';
         
-        const transcript = await transcribeWithWhisper(state.file, verifyData.key);
+        const transcript = await transcribeWithWhisper(state.file, verifyData.key, maxDuration);
         
-        // Step 3: Show result
+        // Step 4: Show result
         state.transcript = transcript;
         elements.transcriptText.textContent = transcript;
+        
+        // If partial transcript, add a note
+        if (maxDuration !== null) {
+          elements.transcriptText.textContent += '\n\n---\n[Transcript limited to what was paid for. Upload again and pay full price for complete transcript.]';
+        }
+        
         showPanel('result');
         scrollToTool();
         
@@ -1865,7 +1883,38 @@
       }
     }
     
-    async function transcribeWithWhisper(file, apiKey) {
+    async function transcribeWithWhisper(file, apiKey, maxDuration = null) {
+      // Check if we need to split the file
+      if (file.size <= CONFIG.maxChunkSize) {
+        // Small file - transcribe directly
+        // If there's a duration limit and it's less than the file, we need to trim
+        if (maxDuration !== null && maxDuration < state.duration) {
+          document.getElementById('processingStatus').textContent = 'Preparing audio...';
+          const trimmedFile = await trimAudioFile(file, maxDuration);
+          return await transcribeChunk(trimmedFile, apiKey);
+        }
+        return await transcribeChunk(file, apiKey);
+      }
+      
+      // Large file - split and transcribe in chunks
+      document.getElementById('processingStatus').textContent = 'Splitting audio into chunks...';
+      
+      const chunks = await splitAudioFile(file, maxDuration);
+      const transcripts = [];
+      
+      for (let i = 0; i < chunks.length; i++) {
+        document.getElementById('processingStatus').textContent = 
+          `Transcribing chunk ${i + 1} of ${chunks.length}...`;
+        
+        const chunkTranscript = await transcribeChunk(chunks[i], apiKey);
+        transcripts.push(chunkTranscript);
+      }
+      
+      // Combine all transcripts
+      return transcripts.join(' ');
+    }
+    
+    async function transcribeChunk(file, apiKey) {
       const formData = new FormData();
       formData.append('file', file);
       formData.append('model', 'whisper-1');
@@ -1885,6 +1934,131 @@
       }
       
       return await response.text();
+    }
+    
+    async function splitAudioFile(file, maxDuration = null) {
+      // Decode audio file
+      const arrayBuffer = await file.arrayBuffer();
+      const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+      
+      // Calculate chunk duration based on file size ratio
+      // If maxDuration is set, only process up to that point
+      const totalDuration = maxDuration !== null 
+        ? Math.min(audioBuffer.duration, maxDuration) 
+        : audioBuffer.duration;
+      
+      const numChunks = Math.ceil((totalDuration / audioBuffer.duration) * file.size / CONFIG.maxChunkSize);
+      const chunkDuration = totalDuration / Math.max(1, numChunks);
+      
+      const chunks = [];
+      
+      for (let i = 0; i < numChunks; i++) {
+        const startTime = i * chunkDuration;
+        const endTime = Math.min((i + 1) * chunkDuration, totalDuration);
+        
+        // Extract chunk from audio buffer
+        const chunkBuffer = extractAudioChunk(audioContext, audioBuffer, startTime, endTime);
+        
+        // Convert to WAV blob
+        const wavBlob = audioBufferToWav(chunkBuffer);
+        
+        // Create file from blob
+        const chunkFile = new File([wavBlob], `chunk_${i}.wav`, { type: 'audio/wav' });
+        chunks.push(chunkFile);
+      }
+      
+      await audioContext.close();
+      return chunks;
+    }
+    
+    async function trimAudioFile(file, maxDuration) {
+      // Decode audio file
+      const arrayBuffer = await file.arrayBuffer();
+      const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+      
+      // Extract only up to maxDuration
+      const trimmedBuffer = extractAudioChunk(audioContext, audioBuffer, 0, maxDuration);
+      
+      // Convert to WAV blob
+      const wavBlob = audioBufferToWav(trimmedBuffer);
+      
+      await audioContext.close();
+      
+      // Create file from blob
+      return new File([wavBlob], 'trimmed_audio.wav', { type: 'audio/wav' });
+    }
+    
+    function extractAudioChunk(audioContext, audioBuffer, startTime, endTime) {
+      const sampleRate = audioBuffer.sampleRate;
+      const startSample = Math.floor(startTime * sampleRate);
+      const endSample = Math.floor(endTime * sampleRate);
+      const frameCount = endSample - startSample;
+      
+      const chunkBuffer = audioContext.createBuffer(
+        audioBuffer.numberOfChannels,
+        frameCount,
+        sampleRate
+      );
+      
+      for (let channel = 0; channel < audioBuffer.numberOfChannels; channel++) {
+        const sourceData = audioBuffer.getChannelData(channel);
+        const destData = chunkBuffer.getChannelData(channel);
+        for (let i = 0; i < frameCount; i++) {
+          destData[i] = sourceData[startSample + i];
+        }
+      }
+      
+      return chunkBuffer;
+    }
+    
+    function audioBufferToWav(audioBuffer) {
+      const numChannels = audioBuffer.numberOfChannels;
+      const sampleRate = audioBuffer.sampleRate;
+      const format = 1; // PCM
+      const bitDepth = 16;
+      
+      const bytesPerSample = bitDepth / 8;
+      const blockAlign = numChannels * bytesPerSample;
+      
+      const samples = audioBuffer.length;
+      const dataSize = samples * blockAlign;
+      const buffer = new ArrayBuffer(44 + dataSize);
+      const view = new DataView(buffer);
+      
+      // WAV header
+      writeString(view, 0, 'RIFF');
+      view.setUint32(4, 36 + dataSize, true);
+      writeString(view, 8, 'WAVE');
+      writeString(view, 12, 'fmt ');
+      view.setUint32(16, 16, true);
+      view.setUint16(20, format, true);
+      view.setUint16(22, numChannels, true);
+      view.setUint32(24, sampleRate, true);
+      view.setUint32(28, sampleRate * blockAlign, true);
+      view.setUint16(32, blockAlign, true);
+      view.setUint16(34, bitDepth, true);
+      writeString(view, 36, 'data');
+      view.setUint32(40, dataSize, true);
+      
+      // Write audio data
+      const offset = 44;
+      for (let i = 0; i < samples; i++) {
+        for (let channel = 0; channel < numChannels; channel++) {
+          const sample = audioBuffer.getChannelData(channel)[i];
+          const intSample = Math.max(-1, Math.min(1, sample)) * 0x7FFF;
+          view.setInt16(offset + (i * blockAlign) + (channel * bytesPerSample), intSample, true);
+        }
+      }
+      
+      return new Blob([buffer], { type: 'audio/wav' });
+    }
+    
+    function writeString(view, offset, string) {
+      for (let i = 0; i < string.length; i++) {
+        view.setUint8(offset + i, string.charCodeAt(i));
+      }
     }
 
     // ===========================================
