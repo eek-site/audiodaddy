@@ -1858,6 +1858,14 @@
         
         // Step 2: Calculate max duration based on what they actually paid
         const amountPaid = amountPaidPence / 100; // Convert pence to pounds
+        
+        // Track conversion in Google Ads
+        gtag('event', 'conversion', {
+          'send_to': 'AW-17834457969/R7kpCL7n6dcbEPH2kLhC',
+          'value': amountPaid,
+          'currency': 'GBP',
+          'transaction_id': intentId
+        });
         const netAfterFees = (amountPaid - CONFIG.stripeFixed) * (1 - CONFIG.stripePercent);
         const maxMinutesPaid = netAfterFees / CONFIG.ratePerMinute;
         const maxSecondsPaid = maxMinutesPaid * 60 * 1.10; // 10% buffer for customer's benefit
