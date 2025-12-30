@@ -13,6 +13,27 @@
     gtag('js', new Date());
     gtag('config', 'AW-17834457969');
   </script>
+  
+  <!-- Geo-redirect non-UK visitors (unless they have gclid) -->
+  <script>
+    (function() {
+      const params = new URLSearchParams(window.location.search);
+      // Allow through if: has gclid, has bypass, or already redirected
+      if (params.has('gclid') || params.has('bypass') || sessionStorage.getItem('geo_checked')) {
+        return;
+      }
+      // Check country and redirect if not UK
+      fetch('https://ipapi.co/json/')
+        .then(r => r.json())
+        .then(data => {
+          sessionStorage.setItem('geo_checked', '1');
+          if (data.country_code && data.country_code !== 'GB') {
+            window.location.href = '/international.html';
+          }
+        })
+        .catch(() => sessionStorage.setItem('geo_checked', '1'));
+    })();
+  </script>
   <meta name="description" content="Transcribe audio to text instantly. Pay only for what you use. No subscriptions, no signups, no nonsense. Built by an entrepreneur who was sick of getting ripped off." />
   <meta name="keywords" content="audio transcription, speech to text, transcribe audio, pay per minute, no subscription" />
   
