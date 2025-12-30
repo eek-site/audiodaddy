@@ -1279,7 +1279,7 @@
           <div class="result-header">
             <h3>✓ Transcription complete</h3>
             <div class="result-actions">
-              <button class="btn-icon" onclick="copyTranscript()">📋 Copy</button>
+              <button class="btn-icon" onclick="copyTranscript(event)">📋 Copy</button>
               <button class="btn-icon" onclick="downloadTranscript()">💾 Download</button>
             </div>
           </div>
@@ -1524,10 +1524,8 @@
     const BASE_RATE = 0.01;          // £0.01 per minute floor
     
     // Adjuster settings - will increase as we learn conversion rates
-    const ADJUSTER_STEP = 0.25;      // How much to adjust by (£0.25)
-    const ADJUSTER_MAX = 4.00;       // Max adjuster can add (so max price = £4.50)
-    const RATE_STEP = 0.02;          // Rate adjustment step
-    const RATE_MAX = 0.20;           // Max rate addition (so max rate = £0.25/min)
+    const ADJUSTER_MAX = 4.00;       // Max adjuster can add (so max price = £4.12)
+    const RATE_MAX = 0.20;           // Max rate addition (so max rate = £0.21/min)
     
     // ===========================================
     // DYNAMIC PRICING ENGINE (using CountAPI)
@@ -1615,17 +1613,6 @@
     function calculateRateAdjuster(adjuster) {
       // Rate scales proportionally with minimum adjuster
       return (adjuster / ADJUSTER_MAX) * RATE_MAX;
-    }
-    
-    // Load pricing (sync version using cached data)
-    let cachedPricing = { adjuster: 0, rateAdjuster: 0, visitors: 0, conversions: 0 };
-    
-    function loadPricingStats() {
-      return cachedPricing;
-    }
-    
-    function savePricingStats(stats) {
-      cachedPricing = stats;
     }
     
     // Get current prices (base + adjuster)
@@ -2181,6 +2168,11 @@
       elements.fileMeta.textContent = formatFileSize(state.file.size);
       elements.priceValue.textContent = state.price.toFixed(2);
       elements.durationText.textContent = formatDuration(state.duration);
+      
+      // Show the actual rate used for this customer
+      const paysFloorPrice = isReturningCustomer() || !isGoogleAdsSession();
+      const rateUsed = paysFloorPrice ? BASE_RATE : CONFIG.ratePerMinute;
+      document.getElementById('rateDisplay').textContent = rateUsed.toFixed(2);
 
       updateSteps('step2');
       showPanel('price');
@@ -2353,8 +2345,14 @@
           'adjuster': CONFIG.adjuster,
           'rate_per_minute': CONFIG.ratePerMinute
         });
-        const netAfterFees = (amountPaid - CONFIG.stripeFixed) * (1 - CONFIG.stripePercent);
-        const maxMinutesPaid = netAfterFees / CONFIG.ratePerMinute;
+        
+        // Use the same rate that was used to calculate their price
+        const paysFloorPrice = isReturningCustomer() || !isGoogleAdsSession();
+        const rateUsed = paysFloorPrice ? BASE_RATE : CONFIG.ratePerMinute;
+        
+        // Correct Stripe fee calculation: net = paid - (paid * percent) - fixed
+        const netAfterFees = amountPaid * (1 - CONFIG.stripePercent) - CONFIG.stripeFixed;
+        const maxMinutesPaid = netAfterFees / rateUsed;
         const maxSecondsPaid = maxMinutesPaid * 60 * 1.10; // 10% buffer for customer's benefit
         
         // If payment covers the file duration (or more), transcribe everything
@@ -2583,12 +2581,14 @@
     // ===========================================
     // RESULT ACTIONS
     // ===========================================
-    function copyTranscript() {
+    function copyTranscript(e) {
       navigator.clipboard.writeText(state.transcript).then(() => {
-        const btn = event.target.closest('.btn-icon');
-        const original = btn.innerHTML;
-        btn.innerHTML = '✓ Copied!';
-        setTimeout(() => { btn.innerHTML = original; }, 2000);
+        const btn = (e && e.target) ? e.target.closest('.btn-icon') : document.querySelector('.result-actions .btn-icon');
+        if (btn) {
+          const original = btn.innerHTML;
+          btn.innerHTML = '✓ Copied!';
+          setTimeout(() => { btn.innerHTML = original; }, 2000);
+        }
       });
     }
 
