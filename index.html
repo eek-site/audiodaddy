@@ -1494,13 +1494,10 @@
     // CONFIGURATION
     // ===========================================
     
-    // Base pricing calculated from actual costs:
-    // - CPC: £0.07 (from Google Ads data)
-    // - OpenAI: ~£0.05 per transcription
-    // - Stripe: £0.20 + 2.9%
-    // - Floor = £0.50 (covers costs + small margin at 100% conversion)
-    const BASE_MINIMUM = 0.50;       // £0.50 minimum price floor
-    const BASE_RATE = 0.05;          // £0.05 per minute floor
+    // Base pricing - aggressive floor to get initial sales
+    // Will auto-increase as conversion data comes in
+    const BASE_MINIMUM = 0.12;       // £0.12 minimum price floor
+    const BASE_RATE = 0.01;          // £0.01 per minute floor
     
     // Adjuster settings - will increase as we learn conversion rates
     const ADJUSTER_STEP = 0.25;      // How much to adjust by (£0.25)
