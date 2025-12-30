@@ -1572,6 +1572,23 @@
       } catch (e) { return 0; }
     }
     
+    // Upload tracking
+    async function getUploadCount() {
+      try {
+        const res = await fetch(`${COUNTER_API}/get/${COUNTER_NAMESPACE}/uploads`);
+        const data = await res.json();
+        return data.value || 0;
+      } catch (e) { return 0; }
+    }
+    
+    async function recordUpload() {
+      try {
+        const res = await fetch(`${COUNTER_API}/hit/${COUNTER_NAMESPACE}/uploads`);
+        const data = await res.json();
+        return data.value || 0;
+      } catch (e) { return 0; }
+    }
+    
     // Calculate adjuster based on conversion rate
     function calculateAdjuster(visitors, conversions) {
       if (visitors < 10) return 0; // Not enough data
@@ -1670,6 +1687,101 @@
     function isDevMode() {
       const params = new URLSearchParams(window.location.search);
       return params.get('gclid') === '12345';
+    }
+    
+    // Stats mode - ?stats shows all CountAPI data
+    function isStatsMode() {
+      const params = new URLSearchParams(window.location.search);
+      return params.has('stats');
+    }
+    
+    // Display stats overlay
+    async function showStatsOverlay() {
+      const visitors = await getVisitorCount();
+      const uploads = await getUploadCount();
+      const conversions = await getConversionCount();
+      
+      const visitToUpload = visitors > 0 ? ((uploads / visitors) * 100).toFixed(1) : '0.0';
+      const uploadToSale = uploads > 0 ? ((conversions / uploads) * 100).toFixed(1) : '0.0';
+      const visitToSale = visitors > 0 ? ((conversions / visitors) * 100).toFixed(1) : '0.0';
+      
+      const adjuster = calculateAdjuster(visitors, conversions);
+      const rateAdj = calculateRateAdjuster(adjuster);
+      const currentMin = BASE_MINIMUM + adjuster;
+      const currentRate = BASE_RATE + rateAdj;
+      
+      const statsHTML = `
+        <div style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: var(--color-bg); z-index: 9999; padding: 40px; overflow: auto;">
+          <div style="max-width: 600px; margin: 0 auto; font-family: var(--font-mono);">
+            <h1 style="color: var(--color-accent); margin-bottom: 32px;">📊 Audio Daddy Stats</h1>
+            
+            <div style="background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 12px; padding: 24px; margin-bottom: 24px;">
+              <h2 style="margin-bottom: 16px; font-size: 1.1rem;">Funnel</h2>
+              <table style="width: 100%; border-collapse: collapse;">
+                <tr style="border-bottom: 1px solid var(--color-border);">
+                  <td style="padding: 12px 0; color: var(--color-text-muted);">Visitors (Google Ads)</td>
+                  <td style="padding: 12px 0; text-align: right; font-weight: bold; color: var(--color-text);">${visitors}</td>
+                </tr>
+                <tr style="border-bottom: 1px solid var(--color-border);">
+                  <td style="padding: 12px 0; color: var(--color-text-muted);">Uploads</td>
+                  <td style="padding: 12px 0; text-align: right; font-weight: bold; color: var(--color-text);">${uploads}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 12px 0; color: var(--color-text-muted);">Sales</td>
+                  <td style="padding: 12px 0; text-align: right; font-weight: bold; color: var(--color-accent);">${conversions}</td>
+                </tr>
+              </table>
+            </div>
+            
+            <div style="background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 12px; padding: 24px; margin-bottom: 24px;">
+              <h2 style="margin-bottom: 16px; font-size: 1.1rem;">Conversion Rates</h2>
+              <table style="width: 100%; border-collapse: collapse;">
+                <tr style="border-bottom: 1px solid var(--color-border);">
+                  <td style="padding: 12px 0; color: var(--color-text-muted);">Visit → Upload</td>
+                  <td style="padding: 12px 0; text-align: right; font-weight: bold; color: var(--color-text);">${visitToUpload}%</td>
+                </tr>
+                <tr style="border-bottom: 1px solid var(--color-border);">
+                  <td style="padding: 12px 0; color: var(--color-text-muted);">Upload → Sale</td>
+                  <td style="padding: 12px 0; text-align: right; font-weight: bold; color: var(--color-text);">${uploadToSale}%</td>
+                </tr>
+                <tr>
+                  <td style="padding: 12px 0; color: var(--color-text-muted);">Visit → Sale</td>
+                  <td style="padding: 12px 0; text-align: right; font-weight: bold; color: var(--color-accent);">${visitToSale}%</td>
+                </tr>
+              </table>
+            </div>
+            
+            <div style="background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 12px; padding: 24px; margin-bottom: 24px;">
+              <h2 style="margin-bottom: 16px; font-size: 1.1rem;">Dynamic Pricing</h2>
+              <table style="width: 100%; border-collapse: collapse;">
+                <tr style="border-bottom: 1px solid var(--color-border);">
+                  <td style="padding: 12px 0; color: var(--color-text-muted);">Floor Price</td>
+                  <td style="padding: 12px 0; text-align: right; font-weight: bold; color: var(--color-text);">£${BASE_MINIMUM.toFixed(2)} + £${BASE_RATE.toFixed(2)}/min</td>
+                </tr>
+                <tr style="border-bottom: 1px solid var(--color-border);">
+                  <td style="padding: 12px 0; color: var(--color-text-muted);">Adjuster</td>
+                  <td style="padding: 12px 0; text-align: right; font-weight: bold; color: var(--color-text);">+£${adjuster.toFixed(2)}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 12px 0; color: var(--color-text-muted);">Google Ads Price</td>
+                  <td style="padding: 12px 0; text-align: right; font-weight: bold; color: var(--color-accent);">£${currentMin.toFixed(2)} + £${currentRate.toFixed(2)}/min</td>
+                </tr>
+              </table>
+            </div>
+            
+            <div style="text-align: center; margin-top: 32px;">
+              <a href="/" style="color: var(--color-accent); text-decoration: none;">← Back to site</a>
+            </div>
+          </div>
+        </div>
+      `;
+      
+      document.body.insertAdjacentHTML('beforeend', statsHTML);
+    }
+    
+    // Check for stats mode on load
+    if (isStatsMode()) {
+      document.addEventListener('DOMContentLoaded', showStatsOverlay);
     }
     
     // Check if visitor came from Google Ads (has gclid parameter)
@@ -2000,6 +2112,17 @@
         URL.revokeObjectURL(audio.src);
         calculatePrice();
         showPricePanel();
+        
+        // Track upload (but not in dev mode)
+        if (!isDevMode()) {
+          recordUpload();
+          sendNotification('upload', {
+            fileName: file.name,
+            fileSize: formatFileSize(file.size),
+            duration: formatDuration(state.duration),
+            priceShown: `£${state.price.toFixed(2)}`
+          });
+        }
       });
 
       audio.addEventListener('error', () => {
