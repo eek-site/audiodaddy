@@ -1597,6 +1597,10 @@
     
     // Record a conversion (called after purchase)
     async function recordConversion(adjuster, amount) {
+      if (isDevMode()) {
+        console.log('🔧 Dev mode - conversion not counted');
+        return;
+      }
       const conversions = await recordSale();
       const visitors = await getVisitorCount();
       const rate = visitors > 0 ? conversions / visitors : 0;
@@ -1630,8 +1634,15 @@
       }
     };
     
+    // Developer mode - gclid=12345 skips all tracking
+    function isDevMode() {
+      const params = new URLSearchParams(window.location.search);
+      return params.get('gclid') === '12345';
+    }
+    
     // Check if visitor came from Google Ads (has gclid parameter)
     function isGoogleAdsVisitor() {
+      if (isDevMode()) return false; // Dev mode doesn't count
       const params = new URLSearchParams(window.location.search);
       return params.has('gclid') || 
              params.get('utm_source') === 'google' || 
@@ -1643,6 +1654,25 @@
     
     async function initPricing() {
       try {
+        // Dev mode - skip all tracking
+        if (isDevMode()) {
+          console.log('🔧 Dev mode active (gclid=12345) - no tracking');
+          const visitors = await getVisitorCount();
+          const conversions = await getConversionCount();
+          const adjuster = calculateAdjuster(visitors, conversions);
+          const rateAdjuster = calculateRateAdjuster(adjuster);
+          initPricingStats = { adjuster, rateAdjuster, visitors, conversions };
+          const prices = getCurrentPrices(initPricingStats);
+          CONFIG.minimumPrice = prices.minimum;
+          CONFIG.ratePerMinute = prices.ratePerMinute;
+          CONFIG.adjuster = adjuster;
+          document.getElementById('heroPrice').textContent = `From £${prices.minimum.toFixed(2)}`;
+          document.getElementById('heroRate').textContent = `+ £${prices.ratePerMinute.toFixed(2)}/min`;
+          document.getElementById('rateDisplay').textContent = prices.ratePerMinute.toFixed(2);
+          document.getElementById('featurePrice').textContent = `From £${prices.minimum.toFixed(2)} + £${prices.ratePerMinute.toFixed(2)}/min. No subscription. Just pay for what you use.`;
+          return;
+        }
+        
         // Only count visitors from Google Ads
         let visitors;
         if (isGoogleAdsVisitor()) {
