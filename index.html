@@ -2364,9 +2364,17 @@
         
         const transcript = await transcribeWithWhisper(state.file, verifyData.key, maxDuration);
         
-        // Step 4: Show result
-        state.transcript = transcript;
-        elements.transcriptText.textContent = transcript;
+        // Step 4: Show result with branding
+        const brandedTranscript = `${transcript}
+
+─────────────────────────────────
+Transcribed by Audio Daddy
+audiodaddy.co.uk
+Pay-per-minute transcription. No subscriptions.
+─────────────────────────────────`;
+        
+        state.transcript = brandedTranscript;
+        elements.transcriptText.textContent = brandedTranscript;
         
         // If partial transcript, add a note
         if (maxDuration !== null) {
