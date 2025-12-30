@@ -1184,8 +1184,8 @@
       <h1>Audio to text,<br><span class="accent">pay only for what you use</span></h1>
       <p class="hero-subtitle">Upload your recording. See the price. Pay. Get your transcript. It's that simple.</p>
       <div class="hero-price">
-        <span class="amount" id="heroPrice">From £0.12</span>
-        <span class="unit" id="heroRate">+ £0.01/min</span>
+        <span class="amount" id="heroPrice">Loading...</span>
+        <span class="unit" id="heroRate"></span>
       </div>
     </div>
   </section>
@@ -1248,7 +1248,7 @@
             <div class="price-amount">
               <span class="currency">£</span><span id="priceValue">0.00</span>
             </div>
-            <div class="rate-info"><span id="durationText">0:00</span> @ £<span id="rateDisplay">0.01</span>/min</div>
+            <div class="rate-info"><span id="durationText">0:00</span> @ £<span id="rateDisplay">--</span>/min</div>
           </div>
 
           <!-- Payment Form -->
@@ -1330,7 +1330,7 @@
         <div class="feature-card">
           <div class="feature-icon">💰</div>
           <h3>Pay per minute</h3>
-          <p id="featurePrice">From £0.12 + £0.01/min. No subscription. Just pay for what you use.</p>
+          <p id="featurePrice">Pay per minute. No subscription. Just pay for what you use.</p>
         </div>
         <div class="feature-card">
           <div class="feature-icon">⚡</div>
@@ -1823,11 +1823,20 @@
       }
     }
     
-    // Load pricing on startup (async - updates prices when ready)
-    initPricing();
-    
     // Initial prices (will be updated by initPricing)
     const currentPrices = getCurrentPrices(initPricingStats);
+    
+    // Set floor prices immediately (before async calls complete)
+    document.addEventListener('DOMContentLoaded', () => {
+      // Show floor price as default until async pricing loads
+      document.getElementById('heroPrice').textContent = `From £${BASE_MINIMUM.toFixed(2)}`;
+      document.getElementById('heroRate').textContent = `+ £${BASE_RATE.toFixed(2)}/min`;
+      document.getElementById('rateDisplay').textContent = BASE_RATE.toFixed(2);
+      document.getElementById('featurePrice').textContent = `From £${BASE_MINIMUM.toFixed(2)} + £${BASE_RATE.toFixed(2)}/min. No subscription. Just pay for what you use.`;
+    });
+    
+    // Load pricing on startup (async - updates prices when ready)
+    initPricing();
     
     const CONFIG = {
       // Pricing (GBP) - base + adjuster
@@ -1913,12 +1922,6 @@
     // INITIALIZATION
     // ===========================================
     document.addEventListener('DOMContentLoaded', () => {
-      // Update price displays dynamically
-      document.getElementById('heroPrice').textContent = `From £${CONFIG.minimumPrice.toFixed(2)}`;
-      document.getElementById('heroRate').textContent = `+ £${CONFIG.ratePerMinute.toFixed(2)}/min`;
-      document.getElementById('rateDisplay').textContent = CONFIG.ratePerMinute.toFixed(2);
-      document.getElementById('featurePrice').textContent = `From £${CONFIG.minimumPrice.toFixed(2)} + £${CONFIG.ratePerMinute.toFixed(2)}/min. No subscription. Just pay for what you use.`;
-      
       // Handle anchor links with smooth scroll
       initAnchorLinks();
       
