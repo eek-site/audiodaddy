@@ -1617,15 +1617,23 @@
     }
     
     // Record a conversion (called after purchase)
+    // Only counts if visitor arrived via Google Ads (gclid)
     async function recordConversion(adjuster, amount) {
       if (isDevMode()) {
         console.log('🔧 Dev mode - conversion not counted');
         return;
       }
+      
+      // Only count conversions from Google Ads sessions
+      if (!isGoogleAdsSession()) {
+        console.log('👤 Organic/direct sale - not counted for pricing algorithm');
+        return;
+      }
+      
       const conversions = await recordSale();
       const visitors = await getVisitorCount();
       const rate = visitors > 0 ? conversions / visitors : 0;
-      console.log(`💰 Sale recorded! ${conversions}/${visitors} = ${(rate*100).toFixed(1)}% conversion`);
+      console.log(`💰 Google Ads sale recorded! ${conversions}/${visitors} = ${(rate*100).toFixed(1)}% conversion`);
     }
     
     // Admin functions (call from browser console)
@@ -1670,10 +1678,25 @@
              params.get('utm_medium') === 'cpc';
     }
     
+    // Track if this SESSION started from Google Ads (for conversion tracking)
+    function markGoogleAdsSession() {
+      if (isGoogleAdsVisitor()) {
+        sessionStorage.setItem('from_gclid', '1');
+      }
+    }
+    
+    // Check if this session started from Google Ads
+    function isGoogleAdsSession() {
+      return sessionStorage.getItem('from_gclid') === '1';
+    }
+    
     // Initialize pricing from CountAPI
     let initPricingStats = { adjuster: 0, rateAdjuster: 0, visitors: 0, conversions: 0 };
     
     async function initPricing() {
+      // Mark session if they arrived via Google Ads (for conversion tracking later)
+      markGoogleAdsSession();
+      
       try {
         // Dev mode - skip all tracking
         if (isDevMode()) {
