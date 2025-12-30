@@ -1163,8 +1163,8 @@
       <h1>Audio to text,<br><span class="accent">pay only for what you use</span></h1>
       <p class="hero-subtitle">Upload your recording. See the price. Pay. Get your transcript. It's that simple.</p>
       <div class="hero-price">
-        <span class="amount">From £4</span>
-        <span class="unit">per transcription</span>
+        <span class="amount" id="heroPrice">From £0.50</span>
+        <span class="unit" id="heroRate">+ £0.05/min</span>
       </div>
     </div>
   </section>
@@ -1227,7 +1227,7 @@
             <div class="price-amount">
               <span class="currency">£</span><span id="priceValue">0.00</span>
             </div>
-            <div class="rate-info"><span id="durationText">0:00</span> of audio</div>
+            <div class="rate-info"><span id="durationText">0:00</span> @ £<span id="rateDisplay">0.05</span>/min</div>
           </div>
 
           <!-- Payment Form -->
@@ -1306,7 +1306,7 @@
         <div class="feature-card">
           <div class="feature-icon">💰</div>
           <h3>Pay per minute</h3>
-          <p>From £4 per transcription. No subscription. Just pay for what you use.</p>
+          <p id="featurePrice">From £4 per transcription. No subscription. Just pay for what you use.</p>
         </div>
         <div class="feature-card">
           <div class="feature-icon">⚡</div>
@@ -1493,9 +1493,192 @@
     // ===========================================
     // CONFIGURATION
     // ===========================================
+    
+    // Base pricing calculated from actual costs:
+    // - CPC: £0.07 (from Google Ads data)
+    // - OpenAI: ~£0.05 per transcription
+    // - Stripe: £0.20 + 2.9%
+    // - Floor = £0.50 (covers costs + small margin at 100% conversion)
+    const BASE_MINIMUM = 0.50;       // £0.50 minimum price floor
+    const BASE_RATE = 0.05;          // £0.05 per minute floor
+    
+    // Adjuster settings - will increase as we learn conversion rates
+    const ADJUSTER_STEP = 0.25;      // How much to adjust by (£0.25)
+    const ADJUSTER_MAX = 4.00;       // Max adjuster can add (so max price = £4.50)
+    const RATE_STEP = 0.02;          // Rate adjustment step
+    const RATE_MAX = 0.20;           // Max rate addition (so max rate = £0.25/min)
+    
+    // ===========================================
+    // DYNAMIC PRICING ENGINE (using CountAPI)
+    // ===========================================
+    
+    const COUNTER_NAMESPACE = 'audiodaddy-uk';
+    const COUNTER_API = 'https://api.countapi.xyz';
+    const GOOD_CONVERSION = 0.05;     // 5% = good, raise price
+    const POOR_CONVERSION = 0.02;     // 2% = poor, lower price
+    
+    // Get current counts from CountAPI
+    async function getVisitorCount() {
+      try {
+        const res = await fetch(`${COUNTER_API}/get/${COUNTER_NAMESPACE}/visitors`);
+        const data = await res.json();
+        return data.value || 0;
+      } catch (e) { return 0; }
+    }
+    
+    async function getConversionCount() {
+      try {
+        const res = await fetch(`${COUNTER_API}/get/${COUNTER_NAMESPACE}/conversions`);
+        const data = await res.json();
+        return data.value || 0;
+      } catch (e) { return 0; }
+    }
+    
+    // Increment counters
+    async function recordVisit() {
+      try {
+        const res = await fetch(`${COUNTER_API}/hit/${COUNTER_NAMESPACE}/visitors`);
+        const data = await res.json();
+        return data.value || 0;
+      } catch (e) { return 0; }
+    }
+    
+    async function recordSale() {
+      try {
+        const res = await fetch(`${COUNTER_API}/hit/${COUNTER_NAMESPACE}/conversions`);
+        const data = await res.json();
+        return data.value || 0;
+      } catch (e) { return 0; }
+    }
+    
+    // Calculate adjuster based on conversion rate
+    function calculateAdjuster(visitors, conversions) {
+      if (visitors < 10) return 0; // Not enough data
+      
+      const conversionRate = conversions / visitors;
+      
+      // Scale adjuster based on conversion rate
+      // Higher conversion = we can charge more
+      if (conversionRate >= 0.10) {
+        return ADJUSTER_MAX; // 10%+ conversion = max price
+      } else if (conversionRate >= GOOD_CONVERSION) {
+        // Scale between 0.05 and 0.10 → adjuster 0.50 to max
+        const scale = (conversionRate - GOOD_CONVERSION) / (0.10 - GOOD_CONVERSION);
+        return 0.50 + (scale * (ADJUSTER_MAX - 0.50));
+      } else if (conversionRate >= POOR_CONVERSION) {
+        // Scale between 0.02 and 0.05 → adjuster 0 to 0.50
+        const scale = (conversionRate - POOR_CONVERSION) / (GOOD_CONVERSION - POOR_CONVERSION);
+        return scale * 0.50;
+      } else {
+        return 0; // Below 2% = floor price
+      }
+    }
+    
+    function calculateRateAdjuster(adjuster) {
+      // Rate scales proportionally with minimum adjuster
+      return (adjuster / ADJUSTER_MAX) * RATE_MAX;
+    }
+    
+    // Load pricing (sync version using cached data)
+    let cachedPricing = { adjuster: 0, rateAdjuster: 0, visitors: 0, conversions: 0 };
+    
+    function loadPricingStats() {
+      return cachedPricing;
+    }
+    
+    function savePricingStats(stats) {
+      cachedPricing = stats;
+    }
+    
+    // Get current prices (base + adjuster)
+    function getCurrentPrices(stats) {
+      return {
+        minimum: BASE_MINIMUM + Math.max(0, stats.adjuster),
+        ratePerMinute: BASE_RATE + Math.max(0, stats.rateAdjuster)
+      };
+    }
+    
+    // Record a conversion (called after purchase)
+    async function recordConversion(adjuster, amount) {
+      const conversions = await recordSale();
+      const visitors = await getVisitorCount();
+      const rate = visitors > 0 ? conversions / visitors : 0;
+      console.log(`💰 Sale recorded! ${conversions}/${visitors} = ${(rate*100).toFixed(1)}% conversion`);
+    }
+    
+    // Admin functions (call from browser console)
+    window.pricingAdmin = {
+      stats: async () => {
+        const visitors = await getVisitorCount();
+        const conversions = await getConversionCount();
+        const rate = visitors > 0 ? conversions / visitors : 0;
+        const adjuster = calculateAdjuster(visitors, conversions);
+        const rateAdj = calculateRateAdjuster(adjuster);
+        
+        console.log('=== LIVE PRICING STATS (CountAPI) ===');
+        console.log(`Visitors: ${visitors}`);
+        console.log(`Conversions: ${conversions}`);
+        console.log(`Conversion rate: ${(rate*100).toFixed(2)}%`);
+        console.log('---');
+        console.log(`Adjuster: £${adjuster.toFixed(2)}`);
+        console.log(`Current minimum: £${(BASE_MINIMUM + adjuster).toFixed(2)}`);
+        console.log(`Current rate: £${(BASE_RATE + rateAdj).toFixed(2)}/min`);
+        
+        return { visitors, conversions, rate, adjuster };
+      },
+      reset: () => {
+        console.log('To reset counters, open these URLs:');
+        console.log(`https://api.countapi.xyz/set/${COUNTER_NAMESPACE}/visitors?value=0`);
+        console.log(`https://api.countapi.xyz/set/${COUNTER_NAMESPACE}/conversions?value=0`);
+      }
+    };
+    
+    // Initialize pricing from CountAPI
+    let initPricingStats = { adjuster: 0, rateAdjuster: 0, visitors: 0, conversions: 0 };
+    
+    async function initPricing() {
+      try {
+        // Record this visit and get current counts
+        const visitors = await recordVisit();
+        const conversions = await getConversionCount();
+        
+        // Calculate adjuster based on actual conversion rate
+        const adjuster = calculateAdjuster(visitors, conversions);
+        const rateAdjuster = calculateRateAdjuster(adjuster);
+        
+        // Update pricing
+        initPricingStats = { adjuster, rateAdjuster, visitors, conversions };
+        const prices = getCurrentPrices(initPricingStats);
+        
+        // Update CONFIG
+        CONFIG.minimumPrice = prices.minimum;
+        CONFIG.ratePerMinute = prices.ratePerMinute;
+        CONFIG.adjuster = adjuster;
+        
+        // Update displayed prices
+        document.getElementById('heroPrice').textContent = `From £${prices.minimum.toFixed(2)}`;
+        document.getElementById('heroRate').textContent = `+ £${prices.ratePerMinute.toFixed(2)}/min`;
+        document.getElementById('rateDisplay').textContent = prices.ratePerMinute.toFixed(2);
+        document.getElementById('featurePrice').textContent = `From £${prices.minimum.toFixed(2)} + £${prices.ratePerMinute.toFixed(2)}/min. No subscription. Just pay for what you use.`;
+        
+        const rate = visitors > 0 ? (conversions/visitors*100).toFixed(1) : '0.0';
+        console.log(`🏷️ Dynamic pricing: £${prices.minimum.toFixed(2)} min | ${visitors} visits, ${conversions} sales, ${rate}% conv`);
+      } catch (e) {
+        console.log('Could not load pricing from CountAPI, using defaults');
+      }
+    }
+    
+    // Load pricing on startup (async - updates prices when ready)
+    initPricing();
+    
+    // Initial prices (will be updated by initPricing)
+    const currentPrices = getCurrentPrices(initPricingStats);
+    
     const CONFIG = {
-      // Pricing (GBP)
-      ratePerMinute: 0.24,
+      // Pricing (GBP) - base + adjuster
+      ratePerMinute: currentPrices.ratePerMinute,
+      minimumPrice: currentPrices.minimum,
+      adjuster: pricingStats.adjuster,
       currency: 'GBP',
       currencySymbol: '£',
       
@@ -1575,6 +1758,12 @@
     // INITIALIZATION
     // ===========================================
     document.addEventListener('DOMContentLoaded', () => {
+      // Update price displays dynamically
+      document.getElementById('heroPrice').textContent = `From £${CONFIG.minimumPrice.toFixed(2)}`;
+      document.getElementById('heroRate').textContent = `+ £${CONFIG.ratePerMinute.toFixed(2)}/min`;
+      document.getElementById('rateDisplay').textContent = CONFIG.ratePerMinute.toFixed(2);
+      document.getElementById('featurePrice').textContent = `From £${CONFIG.minimumPrice.toFixed(2)} + £${CONFIG.ratePerMinute.toFixed(2)}/min. No subscription. Just pay for what you use.`;
+      
       // Handle anchor links with smooth scroll
       initAnchorLinks();
       
@@ -1671,8 +1860,8 @@
       // Add Stripe fees
       const totalCharge = (baseRevenue + CONFIG.stripeFixed) / (1 - CONFIG.stripePercent);
       
-      // Round up, minimum £4.00
-      state.price = Math.max(4.00, Math.round(totalCharge * 100) / 100);
+      // Round up, apply minimum from current pricing tier
+      state.price = Math.max(CONFIG.minimumPrice, Math.round(totalCharge * 100) / 100);
     }
 
     // ===========================================
@@ -1865,6 +2054,16 @@
           'value': amountPaid,
           'currency': 'GBP',
           'transaction_id': intentId
+        });
+        
+        // Record conversion for dynamic pricing optimization
+        recordConversion(CONFIG.adjuster, amountPaid);
+        
+        // Log for analytics
+        gtag('event', 'purchase', {
+          'minimum_price': CONFIG.minimumPrice,
+          'adjuster': CONFIG.adjuster,
+          'rate_per_minute': CONFIG.ratePerMinute
         });
         const netAfterFees = (amountPaid - CONFIG.stripeFixed) * (1 - CONFIG.stripePercent);
         const maxMinutesPaid = netAfterFees / CONFIG.ratePerMinute;
