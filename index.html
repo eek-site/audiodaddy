@@ -1690,6 +1690,16 @@
       return sessionStorage.getItem('from_gclid') === '1';
     }
     
+    // Mark visitor as a paying customer (persistent - localStorage)
+    function markAsCustomer() {
+      localStorage.setItem('audiodaddy_customer', '1');
+    }
+    
+    // Check if returning customer (gets floor price forever)
+    function isReturningCustomer() {
+      return localStorage.getItem('audiodaddy_customer') === '1';
+    }
+    
     // Initialize pricing from CountAPI
     let initPricingStats = { adjuster: 0, rateAdjuster: 0, visitors: 0, conversions: 0 };
     
@@ -1698,22 +1708,26 @@
       markGoogleAdsSession();
       
       try {
-        // Dev mode - skip all tracking
+        // Dev mode - skip all tracking, show floor price
         if (isDevMode()) {
-          console.log('🔧 Dev mode active (gclid=12345) - no tracking');
+          console.log('🔧 Dev mode active (gclid=12345) - no tracking, floor price');
           const visitors = await getVisitorCount();
           const conversions = await getConversionCount();
           const adjuster = calculateAdjuster(visitors, conversions);
           const rateAdjuster = calculateRateAdjuster(adjuster);
           initPricingStats = { adjuster, rateAdjuster, visitors, conversions };
-          const prices = getCurrentPrices(initPricingStats);
-          CONFIG.minimumPrice = prices.minimum;
-          CONFIG.ratePerMinute = prices.ratePerMinute;
-          CONFIG.adjuster = adjuster;
-          document.getElementById('heroPrice').textContent = `From £${prices.minimum.toFixed(2)}`;
-          document.getElementById('heroRate').textContent = `+ £${prices.ratePerMinute.toFixed(2)}/min`;
-          document.getElementById('rateDisplay').textContent = prices.ratePerMinute.toFixed(2);
-          document.getElementById('featurePrice').textContent = `From £${prices.minimum.toFixed(2)} + £${prices.ratePerMinute.toFixed(2)}/min. No subscription. Just pay for what you use.`;
+          // Dev mode sees floor price (like organic visitors)
+          CONFIG.minimumPrice = BASE_MINIMUM;
+          CONFIG.ratePerMinute = BASE_RATE;
+          CONFIG.adjuster = 0;
+          document.getElementById('heroPrice').textContent = `From £${BASE_MINIMUM.toFixed(2)}`;
+          document.getElementById('heroRate').textContent = `+ £${BASE_RATE.toFixed(2)}/min`;
+          document.getElementById('rateDisplay').textContent = BASE_RATE.toFixed(2);
+          if (isReturningCustomer()) {
+            document.getElementById('featurePrice').textContent = `Welcome back! You get our best rate: £${BASE_MINIMUM.toFixed(2)} + £${BASE_RATE.toFixed(2)}/min.`;
+          } else {
+            document.getElementById('featurePrice').textContent = `From £${BASE_MINIMUM.toFixed(2)} + £${BASE_RATE.toFixed(2)}/min. No subscription. Just pay for what you use.`;
+          }
           return;
         }
         
@@ -1724,7 +1738,7 @@
           console.log('📊 Google Ads visitor counted');
         } else {
           visitors = await getVisitorCount();
-          console.log('👤 Direct/organic visitor (not counted for pricing)');
+          console.log('👤 Direct/organic visitor (floor price applies)');
         }
         const conversions = await getConversionCount();
         
@@ -1736,19 +1750,31 @@
         initPricingStats = { adjuster, rateAdjuster, visitors, conversions };
         const prices = getCurrentPrices(initPricingStats);
         
-        // Update CONFIG
+        // Update CONFIG (for Google Ads visitors)
         CONFIG.minimumPrice = prices.minimum;
         CONFIG.ratePerMinute = prices.ratePerMinute;
         CONFIG.adjuster = adjuster;
         
-        // Update displayed prices
-        document.getElementById('heroPrice').textContent = `From £${prices.minimum.toFixed(2)}`;
-        document.getElementById('heroRate').textContent = `+ £${prices.ratePerMinute.toFixed(2)}/min`;
-        document.getElementById('rateDisplay').textContent = prices.ratePerMinute.toFixed(2);
-        document.getElementById('featurePrice').textContent = `From £${prices.minimum.toFixed(2)} + £${prices.ratePerMinute.toFixed(2)}/min. No subscription. Just pay for what you use.`;
+        // Display prices based on visitor type
+        // Returning customers & organic = floor price, First-time Google Ads = dynamic
+        const paysFloorPrice = isReturningCustomer() || !isGoogleAdsSession();
+        const displayMin = paysFloorPrice ? BASE_MINIMUM : prices.minimum;
+        const displayRate = paysFloorPrice ? BASE_RATE : prices.ratePerMinute;
+        
+        document.getElementById('heroPrice').textContent = `From £${displayMin.toFixed(2)}`;
+        document.getElementById('heroRate').textContent = `+ £${displayRate.toFixed(2)}/min`;
+        document.getElementById('rateDisplay').textContent = displayRate.toFixed(2);
+        
+        // Show loyalty message to returning customers
+        if (isReturningCustomer()) {
+          document.getElementById('featurePrice').textContent = `Welcome back! You get our best rate: £${displayMin.toFixed(2)} + £${displayRate.toFixed(2)}/min.`;
+        } else {
+          document.getElementById('featurePrice').textContent = `From £${displayMin.toFixed(2)} + £${displayRate.toFixed(2)}/min. No subscription. Just pay for what you use.`;
+        }
         
         const rate = visitors > 0 ? (conversions/visitors*100).toFixed(1) : '0.0';
-        console.log(`🏷️ Dynamic pricing: £${prices.minimum.toFixed(2)} min | ${visitors} visits, ${conversions} sales, ${rate}% conv`);
+        const priceType = isReturningCustomer() ? 'returning customer' : (isGoogleAdsSession() ? 'dynamic' : 'floor');
+        console.log(`🏷️ ${priceType} pricing: £${displayMin.toFixed(2)} min | ${visitors} visits, ${conversions} sales, ${rate}% conv`);
       } catch (e) {
         console.log('Could not load pricing from CountAPI, using defaults');
       }
@@ -1941,13 +1967,20 @@
     // ===========================================
     function calculatePrice() {
       const minutes = state.duration / 60;
-      const baseRevenue = minutes * CONFIG.ratePerMinute;
+      
+      // Returning customers & organic visitors get floor price
+      // Only first-time Google Ads visitors pay dynamic price
+      const paysFloorPrice = isReturningCustomer() || !isGoogleAdsSession();
+      const ratePerMinute = paysFloorPrice ? BASE_RATE : CONFIG.ratePerMinute;
+      const minimumPrice = paysFloorPrice ? BASE_MINIMUM : CONFIG.minimumPrice;
+      
+      const baseRevenue = minutes * ratePerMinute;
       
       // Add Stripe fees
       const totalCharge = (baseRevenue + CONFIG.stripeFixed) / (1 - CONFIG.stripePercent);
       
-      // Round up, apply minimum from current pricing tier
-      state.price = Math.max(CONFIG.minimumPrice, Math.round(totalCharge * 100) / 100);
+      // Round up, apply minimum
+      state.price = Math.max(minimumPrice, Math.round(totalCharge * 100) / 100);
     }
 
     // ===========================================
@@ -2172,6 +2205,9 @@
         if (maxDuration !== null) {
           elements.transcriptText.textContent += '\n\n---\n[Transcript limited to what was paid for. Upload again and pay full price for complete transcript.]';
         }
+        
+        // Mark as customer - they get floor price forever now
+        markAsCustomer();
         
         showPanel('result');
         scrollToTool();
