@@ -1286,6 +1286,9 @@
           <div class="transcript-box">
             <div class="transcript-text" id="transcriptText"></div>
           </div>
+          <div class="loyalty-message" id="loyaltyMessage" style="background: rgba(0, 212, 170, 0.1); border: 1px solid var(--color-accent); border-radius: var(--radius); padding: 16px; margin-top: 24px; text-align: center; display: none;">
+            <p style="margin: 0; color: var(--color-accent); font-weight: 500;" id="loyaltyText"></p>
+          </div>
           <div class="new-transcription">
             <a href="#" onclick="resetToUpload(); return false;">Transcribe another file →</a>
           </div>
@@ -2208,6 +2211,10 @@
         
         // Mark as customer - they get floor price forever now
         markAsCustomer();
+        
+        // Show loyalty message with future pricing
+        document.getElementById('loyaltyText').textContent = `🎉 Thanks for your purchase! Next time you visit, you'll get our best rate: £${BASE_MINIMUM.toFixed(2)} + £${BASE_RATE.toFixed(2)}/min`;
+        document.getElementById('loyaltyMessage').style.display = 'block';
         
         showPanel('result');
         scrollToTool();
