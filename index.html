@@ -1703,6 +1703,38 @@
       return localStorage.getItem('audiodaddy_customer') === '1';
     }
     
+    // Send notification email via Power Automate
+    async function sendNotification(type, details = {}) {
+      if (isDevMode()) {
+        console.log(`🔧 Dev mode - ${type} notification not sent`);
+        return;
+      }
+      
+      try {
+        const formData = {
+          formType: 'notification',
+          fields: [
+            { name: 'type', value: type },
+            { name: 'timestamp', value: new Date().toISOString() },
+            { name: 'source', value: 'audiodaddy.co.uk' },
+            { name: 'isGoogleAds', value: isGoogleAdsSession() ? 'Yes' : 'No' },
+            { name: 'isReturningCustomer', value: isReturningCustomer() ? 'Yes' : 'No' },
+            ...Object.entries(details).map(([name, value]) => ({ name, value: String(value) }))
+          ]
+        };
+        
+        await fetch(CONFIG.endpoints.contact, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(formData)
+        });
+        
+        console.log(`📧 ${type} notification sent`);
+      } catch (e) {
+        console.log(`Failed to send ${type} notification:`, e);
+      }
+    }
+    
     // Initialize pricing from CountAPI
     let initPricingStats = { adjuster: 0, rateAdjuster: 0, visitors: 0, conversions: 0 };
     
@@ -1778,6 +1810,14 @@
         const rate = visitors > 0 ? (conversions/visitors*100).toFixed(1) : '0.0';
         const priceType = isReturningCustomer() ? 'returning customer' : (isGoogleAdsSession() ? 'dynamic' : 'floor');
         console.log(`🏷️ ${priceType} pricing: £${displayMin.toFixed(2)} min | ${visitors} visits, ${conversions} sales, ${rate}% conv`);
+        
+        // Send visit notification
+        sendNotification('visit', {
+          priceShown: `£${displayMin.toFixed(2)} + £${displayRate.toFixed(2)}/min`,
+          visitorCount: visitors,
+          conversionCount: conversions,
+          conversionRate: `${rate}%`
+        });
       } catch (e) {
         console.log('Could not load pricing from CountAPI, using defaults');
       }
@@ -2211,6 +2251,14 @@
         
         // Mark as customer - they get floor price forever now
         markAsCustomer();
+        
+        // Send purchase notification
+        sendNotification('purchase', {
+          amount: `£${amountPaid.toFixed(2)}`,
+          fileName: state.file?.name || 'Unknown',
+          duration: formatDuration(state.duration),
+          paymentIntentId: intentId
+        });
         
         // Show loyalty message with future pricing
         document.getElementById('loyaltyText').textContent = `🎉 Thanks for your purchase! Next time you visit, you'll get our best rate: £${BASE_MINIMUM.toFixed(2)} + £${BASE_RATE.toFixed(2)}/min`;
