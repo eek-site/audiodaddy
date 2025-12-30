@@ -1630,13 +1630,28 @@
       }
     };
     
+    // Check if visitor came from Google Ads (has gclid parameter)
+    function isGoogleAdsVisitor() {
+      const params = new URLSearchParams(window.location.search);
+      return params.has('gclid') || 
+             params.get('utm_source') === 'google' || 
+             params.get('utm_medium') === 'cpc';
+    }
+    
     // Initialize pricing from CountAPI
     let initPricingStats = { adjuster: 0, rateAdjuster: 0, visitors: 0, conversions: 0 };
     
     async function initPricing() {
       try {
-        // Record this visit and get current counts
-        const visitors = await recordVisit();
+        // Only count visitors from Google Ads
+        let visitors;
+        if (isGoogleAdsVisitor()) {
+          visitors = await recordVisit();
+          console.log('📊 Google Ads visitor counted');
+        } else {
+          visitors = await getVisitorCount();
+          console.log('👤 Direct/organic visitor (not counted for pricing)');
+        }
         const conversions = await getConversionCount();
         
         // Calculate adjuster based on actual conversion rate
