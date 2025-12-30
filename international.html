@@ -313,6 +313,12 @@
   </div>
 
   <script>
+    // If visitor has gclid (Google Ads), send them to main site
+    const params = new URLSearchParams(window.location.search);
+    if (params.has('gclid') || params.get('utm_source') === 'google') {
+      window.location.href = '/' + window.location.search;
+    }
+    
     // Detect country using free IP geolocation
     async function detectCountry() {
       try {
