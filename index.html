@@ -1531,19 +1531,19 @@
     // DYNAMIC PRICING ENGINE (Global Counter)
     // ===========================================
     // Uses CountAPI replacement: countapi.mileshilliard.com
-    // Same API format as original countapi.xyz
+    // API: /api/v1/get/{key} and /api/v1/hit/{key}
+    // No namespaces - use unique key names
     
-    const COUNTER_NAMESPACE = 'audiodaddy-uk';
-    const COUNTER_API = 'https://countapi.mileshilliard.com';
+    const COUNTER_API = 'https://countapi.mileshilliard.com/api/v1';
     const GOOD_CONVERSION = 0.05;     // 5% = good, raise price
     const POOR_CONVERSION = 0.02;     // 2% = poor, lower price
     
     // Get current counts
     async function getVisitorCount() {
       try {
-        const res = await fetch(`${COUNTER_API}/get/${COUNTER_NAMESPACE}/visitors`);
+        const res = await fetch(`${COUNTER_API}/get/audiodaddy-visitors`);
         const data = await res.json();
-        return data.value || 0;
+        return parseInt(data.value) || 0;
       } catch (e) { 
         console.log('Counter API unavailable, using 0');
         return 0; 
@@ -1552,9 +1552,9 @@
     
     async function getConversionCount() {
       try {
-        const res = await fetch(`${COUNTER_API}/get/${COUNTER_NAMESPACE}/conversions`);
+        const res = await fetch(`${COUNTER_API}/get/audiodaddy-conversions`);
         const data = await res.json();
-        return data.value || 0;
+        return parseInt(data.value) || 0;
       } catch (e) { 
         console.log('Counter API unavailable, using 0');
         return 0; 
@@ -1564,34 +1564,34 @@
     // Increment counters (hit endpoint)
     async function recordVisit() {
       try {
-        const res = await fetch(`${COUNTER_API}/hit/${COUNTER_NAMESPACE}/visitors`);
+        const res = await fetch(`${COUNTER_API}/hit/audiodaddy-visitors`);
         const data = await res.json();
-        return data.value || 0;
+        return parseInt(data.value) || 0;
       } catch (e) { return 0; }
     }
     
     async function recordSale() {
       try {
-        const res = await fetch(`${COUNTER_API}/hit/${COUNTER_NAMESPACE}/conversions`);
+        const res = await fetch(`${COUNTER_API}/hit/audiodaddy-conversions`);
         const data = await res.json();
-        return data.value || 0;
+        return parseInt(data.value) || 0;
       } catch (e) { return 0; }
     }
     
     // Upload tracking
     async function getUploadCount() {
       try {
-        const res = await fetch(`${COUNTER_API}/get/${COUNTER_NAMESPACE}/uploads`);
+        const res = await fetch(`${COUNTER_API}/get/audiodaddy-uploads`);
         const data = await res.json();
-        return data.value || 0;
+        return parseInt(data.value) || 0;
       } catch (e) { return 0; }
     }
     
     async function recordUpload() {
       try {
-        const res = await fetch(`${COUNTER_API}/hit/${COUNTER_NAMESPACE}/uploads`);
+        const res = await fetch(`${COUNTER_API}/hit/audiodaddy-uploads`);
         const data = await res.json();
-        return data.value || 0;
+        return parseInt(data.value) || 0;
       } catch (e) { return 0; }
     }
     
