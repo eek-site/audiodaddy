@@ -1528,21 +1528,26 @@
     const RATE_MAX = 0.20;           // Max rate addition (so max rate = £0.21/min)
     
     // ===========================================
-    // DYNAMIC PRICING ENGINE (using CountAPI)
+    // DYNAMIC PRICING ENGINE (Global Counter)
     // ===========================================
+    // Uses CountAPI replacement: countapi.mileshilliard.com
+    // Same API format as original countapi.xyz
     
     const COUNTER_NAMESPACE = 'audiodaddy-uk';
-    const COUNTER_API = 'https://api.countapi.xyz';
+    const COUNTER_API = 'https://countapi.mileshilliard.com';
     const GOOD_CONVERSION = 0.05;     // 5% = good, raise price
     const POOR_CONVERSION = 0.02;     // 2% = poor, lower price
     
-    // Get current counts from CountAPI
+    // Get current counts
     async function getVisitorCount() {
       try {
         const res = await fetch(`${COUNTER_API}/get/${COUNTER_NAMESPACE}/visitors`);
         const data = await res.json();
         return data.value || 0;
-      } catch (e) { return 0; }
+      } catch (e) { 
+        console.log('Counter API unavailable, using 0');
+        return 0; 
+      }
     }
     
     async function getConversionCount() {
@@ -1550,10 +1555,13 @@
         const res = await fetch(`${COUNTER_API}/get/${COUNTER_NAMESPACE}/conversions`);
         const data = await res.json();
         return data.value || 0;
-      } catch (e) { return 0; }
+      } catch (e) { 
+        console.log('Counter API unavailable, using 0');
+        return 0; 
+      }
     }
     
-    // Increment counters
+    // Increment counters (hit endpoint)
     async function recordVisit() {
       try {
         const res = await fetch(`${COUNTER_API}/hit/${COUNTER_NAMESPACE}/visitors`);
@@ -1780,10 +1788,51 @@
              params.get('utm_medium') === 'cpc';
     }
     
+    // Capture all Google Ads tracking parameters
+    function captureGoogleAdsParams() {
+      const params = new URLSearchParams(window.location.search);
+      const trackingParams = {
+        // Google Click ID
+        gclid: params.get('gclid') || '',
+        // UTM Parameters
+        utm_source: params.get('utm_source') || '',
+        utm_medium: params.get('utm_medium') || '',
+        utm_campaign: params.get('utm_campaign') || '',
+        utm_term: params.get('utm_term') || '',        // The keyword that triggered the ad
+        utm_content: params.get('utm_content') || '',
+        // Google Ads specific parameters
+        creative: params.get('creative') || '',        // Ad creative ID
+        adgroup: params.get('adgroup') || '',          // Ad group ID
+        matchtype: params.get('matchtype') || '',      // Keyword match type (e, p, b)
+        network: params.get('network') || '',          // g=Google Search, d=Display
+        device: params.get('device') || '',            // m=mobile, c=computer, t=tablet
+        position: params.get('position') || '',        // Ad position
+        loc: params.get('loc') || params.get('loc_physical_ms') || '', // User location
+        // Page info
+        landing_page: window.location.pathname,
+        referrer: document.referrer || 'direct'
+      };
+      return trackingParams;
+    }
+    
+    // Get stored tracking params (from session)
+    function getStoredTrackingParams() {
+      try {
+        const stored = sessionStorage.getItem('ad_tracking');
+        return stored ? JSON.parse(stored) : null;
+      } catch (e) {
+        return null;
+      }
+    }
+    
     // Track if this SESSION started from Google Ads (for conversion tracking)
     function markGoogleAdsSession() {
       if (isGoogleAdsVisitor()) {
         sessionStorage.setItem('from_gclid', '1');
+        // Store all the tracking params for this session
+        const params = captureGoogleAdsParams();
+        sessionStorage.setItem('ad_tracking', JSON.stringify(params));
+        console.log('📊 Google Ads params captured:', params);
       }
     }
     
@@ -1802,6 +1851,24 @@
       return localStorage.getItem('audiodaddy_customer') === '1';
     }
     
+    // Format match type for readability
+    function formatMatchType(matchtype) {
+      const types = { 'e': 'Exact', 'p': 'Phrase', 'b': 'Broad' };
+      return types[matchtype] || matchtype || 'Unknown';
+    }
+    
+    // Format device for readability
+    function formatDevice(device) {
+      const devices = { 'm': 'Mobile', 'c': 'Desktop', 't': 'Tablet' };
+      return devices[device] || device || 'Unknown';
+    }
+    
+    // Format network for readability
+    function formatNetwork(network) {
+      const networks = { 'g': 'Google Search', 'd': 'Display Network', 's': 'Search Partners' };
+      return networks[network] || network || 'Unknown';
+    }
+    
     // Send notification email via Power Automate
     async function sendNotification(type, details = {}) {
       if (isDevMode()) {
@@ -1810,16 +1877,45 @@
       }
       
       try {
+        // Get Google Ads tracking data
+        const adParams = getStoredTrackingParams() || {};
+        const hasAdData = adParams.gclid || adParams.utm_source;
+        
+        // Build comprehensive field list
+        const fields = [
+          { name: 'type', value: type },
+          { name: 'timestamp', value: new Date().toISOString() },
+          { name: 'source', value: 'audiodaddy.co.uk' },
+          { name: 'isGoogleAds', value: isGoogleAdsSession() ? 'Yes' : 'No' },
+          { name: 'isReturningCustomer', value: isReturningCustomer() ? 'Yes' : 'No' }
+        ];
+        
+        // Add Google Ads tracking if available
+        if (hasAdData) {
+          fields.push(
+            { name: '--- GOOGLE ADS ---', value: '---' },
+            { name: 'gclid', value: adParams.gclid || 'N/A' },
+            { name: 'campaign', value: adParams.utm_campaign || 'N/A' },
+            { name: 'keyword', value: adParams.utm_term || 'N/A' },
+            { name: 'matchType', value: formatMatchType(adParams.matchtype) },
+            { name: 'adGroup', value: adParams.adgroup || 'N/A' },
+            { name: 'creativeId', value: adParams.creative || 'N/A' },
+            { name: 'network', value: formatNetwork(adParams.network) },
+            { name: 'device', value: formatDevice(adParams.device) },
+            { name: 'position', value: adParams.position || 'N/A' },
+            { name: 'location', value: adParams.loc || 'N/A' },
+            { name: '--- PAGE ---', value: '---' },
+            { name: 'landingPage', value: adParams.landing_page || '/' },
+            { name: 'referrer', value: adParams.referrer || 'direct' }
+          );
+        }
+        
+        // Add any additional details passed to the function
+        fields.push(...Object.entries(details).map(([name, value]) => ({ name, value: String(value) })));
+        
         const formData = {
           formType: 'notification',
-          fields: [
-            { name: 'type', value: type },
-            { name: 'timestamp', value: new Date().toISOString() },
-            { name: 'source', value: 'audiodaddy.co.uk' },
-            { name: 'isGoogleAds', value: isGoogleAdsSession() ? 'Yes' : 'No' },
-            { name: 'isReturningCustomer', value: isReturningCustomer() ? 'Yes' : 'No' },
-            ...Object.entries(details).map(([name, value]) => ({ name, value: String(value) }))
-          ]
+          fields: fields
         };
         
         await fetch(CONFIG.endpoints.contact, {
